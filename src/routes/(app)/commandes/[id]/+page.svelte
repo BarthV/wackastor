@@ -80,6 +80,12 @@
 						<span class="info-label">QUANTITE</span>
 						<span class="info-value mono">{data.order.quantity} {data.order.unit}</span>
 					</div>
+					{#if data.order.quality > 0}
+						<div class="info-row">
+							<span class="info-label">QUALITE</span>
+							<span class="info-value mono">{data.order.quality}</span>
+						</div>
+					{/if}
 					{#if data.order.locationName}
 						<div class="info-row">
 							<span class="info-label">LIEU_PREFERE</span>

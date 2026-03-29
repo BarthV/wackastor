@@ -16,6 +16,7 @@ export const orders = sqliteTable('orders', {
 	category: text('category').notNull().default('commodity'),
 	quantity: real('quantity').notNull().default(1),
 	unit: text('unit').notNull().default('SCU'),
+	quality: integer('quality').notNull().default(0),
 	// Optional preferred location
 	locationName: text('location_name'),
 	// Status lifecycle: open -> matched -> fulfilled/cancelled

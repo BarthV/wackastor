@@ -48,6 +48,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (body.status !== undefined) updates.status = body.status;
 	if (body.notes !== undefined) updates.notes = body.notes;
 	if (body.quantity !== undefined) updates.quantity = body.quantity;
+	if (body.quality !== undefined) updates.quality = body.quality;
 
 	await db
 		.update(orders)

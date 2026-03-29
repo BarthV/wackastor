@@ -55,6 +55,7 @@
 					<tr>
 						<th>RESSOURCE</th>
 						<th class="th-right">QUANTITE</th>
+						<th class="th-right">QUALITE</th>
 						<th>STATUT</th>
 						<th>CORRESPONDANCES</th>
 						<th>ACTIONS</th>
@@ -68,6 +69,9 @@
 							</td>
 							<td class="td-right">
 								<span class="qty-value">{order.quantity.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {order.unit}</span>
+							</td>
+							<td class="td-right">
+								<span class="quality-value">{order.quality > 0 ? order.quality : '—'}</span>
 							</td>
 							<td>
 								<Badge
@@ -169,6 +173,7 @@
 	}
 	.order-link:hover { color: var(--color-accent-gold); }
 	.qty-value { font-family: var(--font-mono); color: var(--color-accent-cyan); }
+	.quality-value { font-family: var(--font-mono); color: var(--color-text-primary); }
 	.match-indicator { color: var(--color-accent-green); font-weight: 700; font-size: var(--font-size-xs); }
 	.no-match { color: var(--color-text-muted); font-size: var(--font-size-xs); }
 	.actions { display: flex; gap: var(--space-sm); }

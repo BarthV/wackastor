@@ -53,6 +53,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		category: body.category ?? 'commodity',
 		quantity: body.quantity ?? 1,
 		unit: body.unit ?? 'SCU',
+		quality: body.quality ?? 0,
 		locationName: body.locationName ?? null,
 		status: 'open' as const,
 		matchCount: 0,
