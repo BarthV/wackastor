@@ -1,0 +1,22 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"framework": "sveltekit",
+	"crons": [
+		{
+			"path": "/api/sync/commodities",
+			"schedule": "0 * * * *"
+		},
+		{
+			"path": "/api/sync/items",
+			"schedule": "0 */12 * * *"
+		},
+		{
+			"path": "/api/sync/terminals",
+			"schedule": "0 6,18 * * *"
+		},
+		{
+			"path": "/api/sync/locations",
+			"schedule": "0 3 * * *"
+		}
+	]
+}
