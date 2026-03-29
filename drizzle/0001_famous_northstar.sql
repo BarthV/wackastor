@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `quality` integer DEFAULT 0 NOT NULL;
