@@ -21,6 +21,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Ressource invalide' }, { status: 400 });
 	}
 
+	if (!env.UEXCORP_API_KEY) {
+		return json({ error: 'UEXCORP_API_KEY non configuree' }, { status: 500 });
+	}
+
 	const syncFn = syncFunctions[body.resource];
 	const result = await syncFn(env.UEXCORP_API_KEY);
 
