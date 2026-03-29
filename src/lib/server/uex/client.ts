@@ -22,7 +22,10 @@ async function fetchEndpoint<T>(path: string, apiKey?: string): Promise<T[]> {
 	try {
 		const headers: Record<string, string> = {};
 		if (apiKey) {
+			headers['Accept'] = 'application/json';
 			headers['Authorization'] = `Bearer ${apiKey}`;
+			headers['Content-Type'] = 'application/json';
+			headers['User-Agent'] = 'curl/8.18.0';
 		}
 		const resp = await fetch(url, { headers });
 		if (!resp.ok) {
