@@ -397,15 +397,15 @@
 	.sidebar-footer-link {
 		display: flex;
 		align-items: center;
-		padding: var(--space-sm) var(--space-sm);1
-		color: rgba(255, 193, 93, 0.5);
+		padding: var(--space-sm) var(--space-sm);
+		color: var(--color-text-muted);
 		text-decoration: none;
 		font-size: var(--font-size-xs);
 		letter-spacing: 0.15em;
 		transition: color 75ms;
 	}
 	.sidebar-footer-link:hover {
-		color: var(--color-accent-gold);
+		color: var(--color-accent-red);
 	}
 	.nav-icon-sm {
 		font-size: 16px;

@@ -25,7 +25,7 @@ async function fetchEndpoint<T>(path: string, apiKey?: string): Promise<T[]> {
 			headers['Accept'] = 'application/json';
 			headers['Authorization'] = `Bearer ${apiKey}`;
 			headers['Content-Type'] = 'application/json';
-			headers['User-Agent'] = 'curl/8.18.0';
+			headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 curl/8.18.0';
 		}
 		const resp = await fetch(url, { headers });
 		if (!resp.ok) {
