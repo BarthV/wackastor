@@ -98,8 +98,8 @@
 	<!-- Fixed left sidebar -->
 	<nav class="sidebar">
 		<div class="sidebar-header">
-			<div class="sidebar-section-name">TERMINAL</div>
-			<div class="sidebar-section-sub">SECTEUR_01</div>
+			<div class="sidebar-section-name">STOCK_MGMT</div>
+			<div class="sidebar-section-sub">SECTEUR_WCK</div>
 		</div>
 
 		<div class="sidebar-nav">
