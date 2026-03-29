@@ -117,9 +117,9 @@
 				</thead>
 				<tbody>
 					{#each data.items as item}
-						<tr>
+						<tr onclick={() => goto(`/inventory/${item.id}${$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}`)} class="tr-clickable">
 							<td>
-								<a href="/inventory/{item.id}" class="item-link">{item.name.toUpperCase().replace(/ /g, '_')}</a>
+								<span class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</span>
 							</td>
 							<td><span class="cat-value">{item.category.toUpperCase()}</span></td>
 							<td class="td-right"><span class="qty-value">{formatQuantity(item.quantity, item.unit)}</span></td>
@@ -128,7 +128,7 @@
 							<td>
 								<div class="actions">
 									<a href="/inventory/{item.id}{$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}" class="action-link">MODIFIER</a>
-									<button class="action-delete" onclick={() => handleDelete(item.id)}>SUPPRIMER</button>
+									<button class="action-delete" onclick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>SUPPRIMER</button>
 								</div>
 							</td>
 						</tr>
@@ -239,7 +239,7 @@
 	thead { background: var(--color-bg-panel); }
 	th {
 		text-align: left;
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
@@ -251,20 +251,20 @@
 	}
 	.th-right { text-align: right; }
 	td {
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
 		font-size: var(--font-size-sm);
 	}
 	.td-right { text-align: right; }
 	tbody tr:hover { background: rgba(255, 193, 93, 0.05); }
-	.item-link {
+	.tr-clickable { cursor: pointer; }
+	.item-name {
 		color: var(--color-text-primary);
-		text-decoration: none;
 		font-weight: 700;
 		font-size: var(--font-size-sm);
 		letter-spacing: -0.01em;
 	}
-	.item-link:hover { color: var(--color-accent-gold); }
+	.tr-clickable:hover .item-name { color: var(--color-accent-gold); }
 	.cat-value { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 	.qty-value { font-family: var(--font-mono); color: var(--color-accent-cyan); }
 	.quality-value { font-family: var(--font-mono); color: var(--color-text-primary); }

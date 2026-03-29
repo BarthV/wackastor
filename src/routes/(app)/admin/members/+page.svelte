@@ -200,7 +200,7 @@
 	thead { background: var(--color-bg-panel); }
 	th {
 		text-align: left;
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
@@ -210,7 +210,7 @@
 		border-bottom: 1px solid rgba(255, 193, 93, 0.3);
 	}
 	td {
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
 		font-size: var(--font-size-sm);
 	}

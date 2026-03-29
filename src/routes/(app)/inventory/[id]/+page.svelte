@@ -25,6 +25,8 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => e.key === 'Escape' && goto(data.backUrl)} />
+
 <svelte:head>
 	<title>WACKASTOR - {data.item.name}</title>
 </svelte:head>

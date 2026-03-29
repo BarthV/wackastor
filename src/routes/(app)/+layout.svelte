@@ -134,7 +134,6 @@
 
 <style>
 	.app-shell {
-		min-height: 100vh;
 	}
 
 	/* ── HEADER ── */
@@ -398,7 +397,7 @@
 	.sidebar-footer-link {
 		display: flex;
 		align-items: center;
-		padding: var(--space-sm) var(--space-sm);
+		padding: var(--space-sm) var(--space-sm);1
 		color: rgba(255, 193, 93, 0.5);
 		text-decoration: none;
 		font-size: var(--font-size-xs);
@@ -417,10 +416,10 @@
 	.app-main {
 		margin-left: var(--sidebar-width);
 		padding-top: var(--header-height);
-		min-height: 100vh;
 	}
 	.app-main > :global(*) {
 		padding: var(--space-xl);
+		padding-top: calc(var(--space-sm));
 		max-width: 1600px;
 		margin: 0 auto;
 	}

@@ -4,8 +4,21 @@
 
 	let { data, form } = $props();
 
+	let editingId = $state<string | null>(null);
+	let editingName = $state('');
+
 	function formatDate(ts: number): string {
 		return new Date(ts).toLocaleDateString('fr-FR');
+	}
+
+	function startEdit(corp: { id: string; discordServerName: string }) {
+		editingId = corp.id;
+		editingName = corp.discordServerName;
+	}
+
+	function cancelEdit() {
+		editingId = null;
+		editingName = '';
 	}
 </script>
 
@@ -30,7 +43,26 @@
 			<tbody>
 				{#each data.corps as corp}
 					<tr>
-						<td class="corp-name">{corp.discordServerName.toUpperCase()}</td>
+						<td class="corp-name">
+							{#if editingId === corp.id}
+								<form method="POST" action="?/rename" use:enhance class="inline-form">
+									<input type="hidden" name="id" value={corp.id} />
+									<input
+										type="text"
+										name="discordServerName"
+										bind:value={editingName}
+										class="inline-input"
+										onkeydown={(e) => e.key === 'Escape' && cancelEdit()}
+										required
+										autofocus
+									/>
+									<button type="submit" class="inline-btn inline-btn-save">OK</button>
+									<button type="button" class="inline-btn inline-btn-cancel" onclick={cancelEdit}>✕</button>
+								</form>
+							{:else}
+								<span class="corp-name-text" onclick={() => startEdit(corp)} title="Cliquer pour renommer">{corp.discordServerName.toUpperCase()}</span>
+							{/if}
+						</td>
 						<td class="corp-id">{corp.discordServerId}</td>
 						<td class="corp-date">{formatDate(corp.createdAt)}</td>
 					</tr>
@@ -96,7 +128,7 @@
 	thead { background: var(--color-bg-panel); }
 	th {
 		text-align: left;
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
@@ -106,11 +138,40 @@
 		border-bottom: 1px solid rgba(255, 193, 93, 0.3);
 	}
 	td {
-		padding: var(--space-md);
+		padding: 10px var(--space-md);
 		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
 		font-size: var(--font-size-sm);
 	}
 	.corp-name { font-weight: 700; }
+	.corp-name-text { cursor: pointer; }
+	.corp-name-text:hover { color: var(--color-accent-gold); text-decoration: underline dotted; }
+	.inline-form { display: flex; align-items: center; gap: var(--space-xs); }
+	.inline-input {
+		padding: 4px 8px;
+		background: var(--color-bg-tertiary);
+		border: none;
+		border-bottom: 2px solid var(--color-accent-cyan);
+		color: var(--color-text-primary);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		width: 200px;
+	}
+	.inline-input:focus { outline: none; }
+	.inline-btn {
+		padding: 3px 8px;
+		border: 1px solid;
+		background: transparent;
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		cursor: pointer;
+		letter-spacing: 0.1em;
+	}
+	.inline-btn-save { border-color: var(--color-accent-cyan); color: var(--color-accent-cyan); }
+	.inline-btn-save:hover { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+	.inline-btn-cancel { border-color: var(--color-border); color: var(--color-text-muted); }
+	.inline-btn-cancel:hover { border-color: var(--color-accent-red); color: var(--color-accent-red); }
 	.corp-id { font-family: var(--font-mono); color: var(--color-text-secondary); }
 	.corp-date { font-family: var(--font-mono); color: var(--color-text-muted); }
 
