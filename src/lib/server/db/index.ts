@@ -5,8 +5,8 @@ import Database from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema/index.js';
 
-const DATABASE_URL = process.env.DATABASE_URL || 'file:local.db';
-const DATABASE_AUTH_TOKEN = process.env.DATABASE_AUTH_TOKEN;
+const DATABASE_URL = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'file:local.db';
+const DATABASE_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;
 
 function createDb(): BetterSQLite3Database<typeof schema> {
 	const isLocal = DATABASE_URL.startsWith('file:') || !DATABASE_AUTH_TOKEN;
