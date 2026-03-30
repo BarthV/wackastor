@@ -20,12 +20,12 @@ const API_BASE = 'https://api.uexcorp.space/2.0';
 async function fetchEndpoint<T>(path: string, apiKey?: string): Promise<T[]> {
 	const url = `${API_BASE}/${path}`;
 	try {
-		const headers: Record<string, string> = {};
+		const headers: Record<string, string> = {
+			'Accept': 'application/json',
+			'User-Agent': 'curl/8.7.1'
+		};
 		if (apiKey) {
-			headers['Accept'] = 'application/json';
 			headers['Authorization'] = `Bearer ${apiKey}`;
-			headers['Content-Type'] = 'application/json';
-			headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 curl/8.18.0';
 		}
 		const resp = await fetch(url, { headers });
 		if (!resp.ok) {
