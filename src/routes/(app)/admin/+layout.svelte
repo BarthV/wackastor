@@ -13,6 +13,7 @@
 		<a href="/admin" class="admin-nav-link">TABLEAU_DE_BORD</a>
 		<a href="/admin/members" class="admin-nav-link">MEMBRES</a>
 		<a href="/admin/sync" class="admin-nav-link">SYNCHRONISATION</a>
+		<a href="/admin/debug-uex" class="admin-nav-link">DEBUG_UEX</a>
 	</nav>
 	{@render children()}
 </div>
