@@ -5,6 +5,78 @@
 
 	let { data } = $props();
 	let syncing = $state<Record<string, boolean>>({});
+	let clientSyncing = $state<Record<string, boolean>>({});
+	let clientProgress = $state<Record<string, string>>({});
+
+	const UEX_BASE = 'https://api.uexcorp.space/2.0';
+	const UEX_HEADERS = { Accept: 'application/json' };
+
+	// Category IDs for items (must match server-side ITEM_CATEGORIES)
+	const ITEM_CATEGORY_IDS = [1,2,3,4,5,7,8,9,10,11,13,14,16,17,18,19,20,21,22,23,24,25,26,28,29,30,31,32,33,34,35,36,38,41];
+
+	async function uexFetch(path: string): Promise<unknown[]> {
+		const resp = await fetch(`${UEX_BASE}/${path}`, { headers: UEX_HEADERS });
+		if (!resp.ok) throw new Error(`UEX ${path}: ${resp.status} ${resp.statusText}`);
+		const json = await resp.json();
+		if (json.status !== 'ok') throw new Error(`UEX ${path}: status=${json.status}`);
+		return json.data ?? [];
+	}
+
+	async function clientSync(resource: string) {
+		clientSyncing[resource] = true;
+		clientProgress[resource] = 'Récupération...';
+		try {
+			let payload: unknown;
+
+			if (resource === 'commodities') {
+				const d = await uexFetch('commodities');
+				clientProgress[resource] = `${d.length} commodités récupérées — envoi...`;
+				payload = { resource, data: d };
+			} else if (resource === 'terminals') {
+				const d = await uexFetch('terminals');
+				clientProgress[resource] = `${d.length} terminaux récupérés — envoi...`;
+				payload = { resource, data: d };
+			} else if (resource === 'locations') {
+				clientProgress[resource] = 'Récupération lieux (5 endpoints)...';
+				const [planets, moons, space_stations, cities, outposts] = await Promise.all([
+					uexFetch('planets'), uexFetch('moons'), uexFetch('space_stations'),
+					uexFetch('cities'), uexFetch('outposts')
+				]);
+				const total = planets.length + moons.length + space_stations.length + cities.length + outposts.length;
+				clientProgress[resource] = `${total} lieux récupérés — envoi...`;
+				payload = { resource, data: { planets, moons, space_stations, cities, outposts } };
+			} else if (resource === 'items') {
+				const allItems: unknown[] = [];
+				for (let i = 0; i < ITEM_CATEGORY_IDS.length; i++) {
+					const catId = ITEM_CATEGORY_IDS[i];
+					clientProgress[resource] = `Catégorie ${i + 1}/${ITEM_CATEGORY_IDS.length} (id=${catId})...`;
+					const items = await uexFetch(`items?id_category=${catId}`).catch(() => []);
+					allItems.push(...items);
+				}
+				clientProgress[resource] = `${allItems.length} objets récupérés — envoi...`;
+				payload = { resource, data: allItems };
+			} else {
+				return;
+			}
+
+			const resp = await fetch('/api/admin/sync/ingest', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			const result = await resp.json();
+			if (resp.ok) {
+				clientProgress[resource] = `✓ ${result.recordCount} enregistrements persistés`;
+				await invalidateAll();
+			} else {
+				clientProgress[resource] = `Erreur: ${result.error}`;
+			}
+		} catch (err) {
+			clientProgress[resource] = `Erreur: ${err instanceof Error ? err.message : String(err)}`;
+		} finally {
+			clientSyncing[resource] = false;
+		}
+	}
 
 	const resourceLabels: Record<string, string> = {
 		commodities: 'MATIERES_PREMIERES',
@@ -95,6 +167,16 @@
 				>
 					{syncing[resource] ? 'SYNCHRONISATION...' : 'FORCER_SYNCHRONISATION'}
 				</button>
+				<button
+					class="btn-sync-client clipped-corner"
+					disabled={clientSyncing[resource]}
+					onclick={() => clientSync(resource)}
+				>
+					{clientSyncing[resource] ? 'EN_COURS...' : 'SYNC_NAVIGATEUR'}
+				</button>
+				{#if clientProgress[resource]}
+					<div class="client-progress">{clientProgress[resource]}</div>
+				{/if}
 			</div>
 		</div>
 	{/each}
@@ -197,5 +279,28 @@
 	.btn-sync:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+	.btn-sync-client {
+		width: 100%;
+		margin-top: var(--space-xs);
+		padding: 8px var(--space-md);
+		background: transparent;
+		border: 1px solid var(--color-accent-cyan);
+		color: var(--color-accent-cyan);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.2em;
+		cursor: pointer;
+	}
+	.btn-sync-client:hover:not(:disabled) { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+	.btn-sync-client:disabled { opacity: 0.5; cursor: not-allowed; }
+	.client-progress {
+		margin-top: var(--space-xs);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		word-break: break-word;
 	}
 </style>
