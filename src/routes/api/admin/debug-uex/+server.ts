@@ -29,11 +29,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		const resp = await fetch(UEX_URL, { headers });
 		const elapsed = Date.now() - start;
-		let responseBody: unknown = null;
+		const rawText = await resp.text();
+		let responseBody: unknown;
 		try {
-			responseBody = await resp.json();
+			responseBody = JSON.parse(rawText);
 		} catch {
-			responseBody = await resp.text();
+			responseBody = rawText;
 		}
 		return json({ httpStatus: resp.status, httpStatusText: resp.statusText, elapsed, body: responseBody, keyPresent, keyPrefix });
 	} catch (err) {
