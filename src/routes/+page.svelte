@@ -4,6 +4,8 @@
 	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 
+	import { formatQuantity } from '$lib/utils/formatQuantity.js';
+
 	let { data } = $props();
 
 	const authenticated = $derived(!!data.user);
@@ -89,24 +91,103 @@
 			<span class="classified-text">DONNEES CLASSIFIEES — AUTHENTIFICATION REQUISE</span>
 			<a href="/login" class="classified-link">ACCEDER</a>
 		</div>
-	{/if}
+		<div class="grid redacted">
+			<TerminalCard title="Apercu de l'inventaire" number="01">
+				<DataTable {columns} {rows} />
+			</TerminalCard>
+			<TerminalCard title="Etats des operations" number="02">
+				<div class="status-list">
+					{#each statusLabels as s}
+						<div class="status-row">
+							<span class="status-label redacted-text">{s.label}</span>
+							<Badge variant={s.variant} label={s.text} />
+						</div>
+					{/each}
+				</div>
+			</TerminalCard>
+		</div>
+	{:else}
+		<div class="auth-layout">
+			<!-- Colonne gauche : nav + opérations -->
+			<div class="left-col">
+				<div class="nav-grid">
+					<a href="/stock" class="nav-card clipped-corner">
+						<span class="material-symbols-outlined card-icon">inventory_2</span>
+						<span class="card-title">STOCKS</span>
+						<span class="card-desc">Consulter les stocks de la corporation</span>
+					</a>
+					<a href="/inventory" class="nav-card clipped-corner">
+						<span class="material-symbols-outlined card-icon">package_2</span>
+						<span class="card-title">INVENTAIRE</span>
+						<span class="card-desc">Gerer votre inventaire personnel</span>
+					</a>
+					<a href="/commandes" class="nav-card clipped-corner">
+						<span class="material-symbols-outlined card-icon">list_alt</span>
+						<span class="card-title">COMMANDES</span>
+						<span class="card-desc">Suivre vos commandes et correspondances</span>
+					</a>
+					<a href="/stats" class="nav-card clipped-corner">
+						<span class="material-symbols-outlined card-icon">bar_chart</span>
+						<span class="card-title">STATS</span>
+						<span class="card-desc">Statistiques et rapports de la corporation</span>
+					</a>
+				</div>
 
-	<div class="grid" class:redacted={!authenticated}>
-		<TerminalCard title="Apercu de l'inventaire" number="01">
-			<DataTable {columns} {rows} />
-		</TerminalCard>
-
-		<TerminalCard title="Etats des operations" number="02">
-			<div class="status-list">
-				{#each statusLabels as s}
-					<div class="status-row">
-						<span class="status-label" class:redacted-text={!authenticated}>{s.label}</span>
-						<Badge variant={s.variant} label={s.text} />
+				{#if data.stats}
+					<div class="ops-card clipped-corner">
+						<div class="ops-header">// ETAT_DES_OPERATIONS</div>
+						<div class="ops-row">
+							<span class="ops-label">OBJETS_DECLARES</span>
+							<span class="ops-value mono">{data.stats.itemCount}</span>
+						</div>
+						<div class="ops-row">
+							<span class="ops-label">COMMANDES_ACTIVES</span>
+							<span class="ops-value mono">{data.stats.orderCount}</span>
+						</div>
+						<div class="ops-row">
+							<span class="ops-label">SCU_TOTAL</span>
+							<span class="ops-value mono">{data.stats.totalScu.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SCU</span>
+						</div>
+						<div class="ops-row">
+							<span class="ops-label">QUALITE_MOYENNE</span>
+							<span class="ops-value mono">{data.stats.avgQuality ?? '—'}</span>
+						</div>
 					</div>
-				{/each}
+				{/if}
 			</div>
-		</TerminalCard>
-	</div>
+
+			<!-- Colonne droite : TOP 10 -->
+			<div class="right-col">
+				<div class="top10-card clipped-corner">
+					<div class="ops-header">// TOP_10_STOCKS_CORPORATION</div>
+					{#if data.topItems && data.topItems.length > 0}
+						<table class="top10-table">
+							<thead>
+								<tr>
+									<th>RESSOURCE</th>
+									<th class="th-right">QUANTITE</th>
+									<th class="th-right">QUALITE</th>
+									<th>LIEU</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each data.topItems as item}
+									<tr>
+										<td class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</td>
+										<td class="td-right mono cyan">{formatQuantity(item.quantity, item.unit)}</td>
+										<td class="td-right mono">{item.quality > 0 ? item.quality : '—'}</td>
+										<td class="loc">{item.locationName ? item.locationName.toUpperCase().replace(/ /g, '_') : '—'}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{:else}
+						<p class="empty">AUCUN_OBJET_DECLARE</p>
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -160,6 +241,147 @@
 	.status-label {
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
+	}
+
+	/* ── Auth layout ── */
+	.auth-layout {
+		display: grid;
+		grid-template-columns: 2fr 3fr;
+		gap: var(--space-lg);
+		align-items: start;
+	}
+	.left-col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-md);
+	}
+	.right-col {
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* ── Ops card ── */
+	.ops-card {
+		background: var(--color-bg-tertiary);
+		border: 1px solid rgba(72, 72, 73, 0.2);
+		overflow: hidden;
+	}
+	.ops-header {
+		padding: var(--space-sm) var(--space-md);
+		background: var(--color-bg-panel);
+		border-bottom: 1px solid rgba(255, 193, 93, 0.2);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-accent-gold);
+		letter-spacing: 0.1em;
+	}
+	.ops-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: var(--space-sm) var(--space-md);
+		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
+	}
+	.ops-row:last-child { border-bottom: none; }
+	.ops-label {
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+	.ops-value {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-primary);
+	}
+	.ops-value.mono { font-family: var(--font-mono); color: var(--color-accent-cyan); }
+
+	/* ── Top 10 card ── */
+	.top10-card {
+		background: var(--color-bg-tertiary);
+		border: 1px solid rgba(72, 72, 73, 0.2);
+		overflow: hidden;
+	}
+	.top10-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+	.top10-table th {
+		text-align: left;
+		padding: 10px var(--space-md);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		color: var(--color-accent-gold);
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		border-bottom: 1px solid rgba(255, 193, 93, 0.3);
+		background: var(--color-bg-panel);
+	}
+	.th-right { text-align: right; }
+	.top10-table td {
+		padding: 10px var(--space-md);
+		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
+		font-size: var(--font-size-sm);
+	}
+	.top10-table tbody tr:last-child td { border-bottom: none; }
+	.top10-table tbody tr:hover { background: rgba(255, 193, 93, 0.04); }
+	.td-right { text-align: right; }
+	.item-name { font-weight: 700; color: var(--color-text-primary); }
+	.mono { font-family: var(--font-mono); }
+	.cyan { color: var(--color-accent-cyan); }
+	.loc { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+	.empty {
+		padding: var(--space-lg) var(--space-md);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
+		letter-spacing: 0.1em;
+	}
+
+	/* ── Nav cards ── */
+	.nav-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--space-md);
+	}
+	.nav-card {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-sm);
+		padding: var(--space-xl);
+		border: 1px solid rgba(72, 72, 73, 0.2);
+		background: var(--color-bg-tertiary);
+		text-decoration: none;
+		position: relative;
+		overflow: hidden;
+	}
+	.nav-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: 64px;
+		height: 64px;
+		background: rgba(255, 193, 93, 0.05);
+		transform: rotate(-45deg) translate(32px, -32px);
+	}
+	.nav-card:hover { border-color: var(--color-border-dim); }
+	.card-icon {
+		font-size: 28px;
+		color: var(--color-accent-cyan);
+	}
+	.card-title {
+		font-family: var(--font-condensed);
+		font-size: var(--font-size-md);
+		color: var(--color-text-primary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 600;
+	}
+	.card-desc {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-muted);
 	}
 
 	/* ── Classified banner ── */

@@ -18,7 +18,18 @@
 			<span class="header-module">// INVENTAIRE CORPORATION</span>
 		</div>
 		<div class="header-right">
-			{#if !data.user}
+			{#if data.user}
+				<div class="header-user">
+					<div class="header-avatar">
+						{#if data.user.avatar && (data.user as Record<string, unknown>).discordId}
+							<img src="https://cdn.discordapp.com/avatars/{(data.user as Record<string, unknown>).discordId}/{data.user.avatar}.png?size=64" alt="" />
+						{:else}
+							<span class="avatar-fallback">{data.user.username[0].toUpperCase()}</span>
+						{/if}
+					</div>
+					<span class="header-username">{data.user.username.toUpperCase()}</span>
+				</div>
+			{:else}
 				<a href="/login" class="header-login">
 					<span class="material-symbols-outlined login-icon">login</span>
 					<span class="login-label">CONNEXION</span>
@@ -94,6 +105,41 @@
 	}
 	.login-label {
 		line-height: 1;
+	}
+	.header-user {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+	}
+	.header-avatar {
+		width: 32px;
+		height: 32px;
+		background: rgba(255, 193, 93, 0.1);
+		border: 1px solid rgba(255, 193, 93, 0.3);
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.header-avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		filter: grayscale(30%);
+		opacity: 0.9;
+	}
+	.avatar-fallback {
+		font-family: var(--font-condensed);
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--color-accent-gold);
+	}
+	.header-username {
+		font-family: var(--font-condensed);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		color: var(--color-accent-gold);
+		letter-spacing: 0.1em;
 	}
 	.header-title {
 		font-family: var(--font-condensed);
