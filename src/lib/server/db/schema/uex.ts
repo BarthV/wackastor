@@ -102,6 +102,13 @@ export const itemSectionConfigs = sqliteTable('item_section_configs', {
 	icon: text('icon').notNull().default('category')
 });
 
+// -- Item subcategory config: per-UEX-category overrides within a section
+export const itemSubcategoryConfigs = sqliteTable('item_subcategory_configs', {
+	category: text('category').primaryKey(), // UEX category name (e.g. "Gadgets")
+	wackCategory: text('wack_category', { enum: ['item', 'equipment'] }).notNull().default('item'),
+	disabled: integer('disabled', { mode: 'boolean' }).notNull().default(false)
+});
+
 // -- Commodity quality config: superadmin-defined list of commodities that have a quality level
 export const commodityQualityConfigs = sqliteTable('commodity_quality_configs', {
 	uexCommodityId: integer('uex_commodity_id').primaryKey()

@@ -8,6 +8,7 @@ export {
 	uexSyncLog,
 	commodityUnitConfigs,
 	itemSectionConfigs,
+	itemSubcategoryConfigs,
 	commodityQualityConfigs
 } from './uex.js';
 export { inventoryItems } from './inventory.js';

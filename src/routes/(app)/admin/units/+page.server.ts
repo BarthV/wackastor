@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
-import { uexCommodities, uexItems, commodityUnitConfigs, itemSectionConfigs, commodityQualityConfigs } from '$lib/server/db/schema/index.js';
+import { uexCommodities, uexItems, commodityUnitConfigs, itemSectionConfigs, itemSubcategoryConfigs, commodityQualityConfigs } from '$lib/server/db/schema/index.js';
 import { isSuperadmin } from '$lib/server/auth/permissions.js';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
 
-	const [commodities, rawSections, sectionConfigs, qualityConfigs] = await Promise.all([
+	const [commodities, rawSections, rawSubcategories, sectionConfigs, subcategoryConfigs, qualityConfigs] = await Promise.all([
 		db
 			.select({
 				id: uexCommodities.id,
@@ -32,7 +32,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			.where(sql`${uexItems.section} != ''`)
 			.orderBy(uexItems.section),
 
+		db
+			.selectDistinct({ section: uexItems.section, category: uexItems.category })
+			.from(uexItems)
+			.where(and(sql`${uexItems.section} != ''`, sql`${uexItems.category} != ''`))
+			.orderBy(uexItems.section, uexItems.category),
+
 		db.select().from(itemSectionConfigs),
+
+		db.select().from(itemSubcategoryConfigs),
 
 		db
 			.select({
@@ -46,13 +54,30 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	]);
 
 	const sectionMap = new Map(sectionConfigs.map((s) => [s.section, s]));
+	const subcategoryMap = new Map(subcategoryConfigs.map((s) => [s.category, s]));
+
+	// Group subcategories by section
+	const subcategoriesBySection = new Map<string, { category: string; wackCategory: 'item' | 'equipment'; disabled: boolean; hasOverride: boolean }[]>();
+	for (const { section, category } of rawSubcategories) {
+		if (!section || !category) continue;
+		if (!subcategoriesBySection.has(section)) subcategoriesBySection.set(section, []);
+		const override = subcategoryMap.get(category);
+		subcategoriesBySection.get(section)!.push({
+			category,
+			wackCategory: (override?.wackCategory ?? 'item') as 'item' | 'equipment',
+			disabled: override?.disabled ?? false,
+			hasOverride: !!override
+		});
+	}
+
 	const sections = rawSections.map((r) => {
 		const config = sectionMap.get(r.section);
 		return {
 			section: r.section,
 			category: (config?.category ?? 'item') as 'item' | 'equipment',
 			disabled: config?.disabled ?? false,
-			icon: config?.icon ?? 'category'
+			icon: config?.icon ?? 'category',
+			subcategories: subcategoriesBySection.get(r.section) ?? []
 		};
 	});
 

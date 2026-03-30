@@ -7,6 +7,8 @@
 	let search = $state(data.q);
 	let saving = $state<number | null>(null);
 	let savingSection = $state<string | null>(null);
+	let savingSubcat = $state<string | null>(null);
+	let expandedSections = $state<Set<string>>(new Set());
 
 	// Quality section
 	let qualityQuery = $state('');
@@ -88,6 +90,45 @@
 			body: JSON.stringify({ section, icon: icon.trim() })
 		});
 		savingSection = null;
+		invalidateAll();
+	}
+
+	function toggleSection(section: string) {
+		const next = new Set(expandedSections);
+		if (next.has(section)) next.delete(section); else next.add(section);
+		expandedSections = next;
+	}
+
+	async function setSubcategoryCategory(category: string, wackCategory: 'item' | 'equipment') {
+		savingSubcat = category;
+		await fetch('/api/admin/item-subcategories', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ category, wackCategory })
+		});
+		savingSubcat = null;
+		invalidateAll();
+	}
+
+	async function setSubcategoryDisabled(category: string, disabled: boolean) {
+		savingSubcat = category;
+		await fetch('/api/admin/item-subcategories', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ category, disabled })
+		});
+		savingSubcat = null;
+		invalidateAll();
+	}
+
+	async function resetSubcategory(category: string) {
+		savingSubcat = category;
+		await fetch('/api/admin/item-subcategories', {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ category })
+		});
+		savingSubcat = null;
 		invalidateAll();
 	}
 
@@ -226,7 +267,22 @@
 				<tbody>
 					{#each data.sections as s}
 						<tr class:row-saving={savingSection === s.section} class:row-disabled={s.disabled}>
-							<td class="td-section" class:muted={s.disabled}>{s.section}</td>
+							<td class="td-section" class:muted={s.disabled}>
+								<button
+									class="expand-btn"
+									onclick={() => toggleSection(s.section)}
+									title={expandedSections.has(s.section) ? 'Replier' : `${s.subcategories.length} sous-catégories`}
+									disabled={s.subcategories.length === 0}
+								>
+									<span class="material-symbols-outlined expand-icon" class:expanded={expandedSections.has(s.section)}>
+										chevron_right
+									</span>
+								</button>
+								{s.section}
+								{#if s.subcategories.length > 0}
+									<span class="subcat-count">{s.subcategories.length}</span>
+								{/if}
+							</td>
 							<td class="td-icon">
 								<div class="icon-field">
 									<span class="material-symbols-outlined icon-preview">{s.icon}</span>
@@ -267,6 +323,48 @@
 								/>
 							</td>
 						</tr>
+						{#if expandedSections.has(s.section)}
+							{#each s.subcategories as sub}
+								<tr class="subcat-row" class:row-saving={savingSubcat === sub.category} class:row-disabled={sub.disabled}>
+									<td class="td-subcat" class:muted={sub.disabled}>
+										<span class="subcat-indent">↳</span>
+										{sub.category}
+										{#if sub.hasOverride}
+											<span class="override-badge">OVERRIDE</span>
+										{/if}
+									</td>
+									<td class="td-icon"></td>
+									<td class="td-toggle">
+										<label class="toggle-label" aria-label="Basculer categorie sous-section">
+											<span class="toggle-opt" class:active={sub.wackCategory === 'item' && !sub.disabled}>OBJET</span>
+											<button
+												class="toggle-track"
+												class:equipment={sub.wackCategory === 'equipment'}
+												onclick={() => setSubcategoryCategory(sub.category, sub.wackCategory === 'item' ? 'equipment' : 'item')}
+												disabled={savingSubcat === sub.category || sub.disabled}
+												role="switch"
+												aria-checked={sub.wackCategory === 'equipment'}
+											>
+												<span class="toggle-thumb"></span>
+											</button>
+											<span class="toggle-opt" class:active={sub.wackCategory === 'equipment' && !sub.disabled}>EQUIPEMENT</span>
+										</label>
+									</td>
+									<td class="td-check td-subcat-actions">
+										<input
+											type="checkbox"
+											checked={sub.disabled}
+											onchange={() => setSubcategoryDisabled(sub.category, !sub.disabled)}
+											disabled={savingSubcat === sub.category}
+											title="Desactiver cette sous-categorie"
+										/>
+										{#if sub.hasOverride}
+											<button class="btn-reset" onclick={() => resetSubcategory(sub.category)} title="Réinitialiser (hériter de la section)">↺</button>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -431,6 +529,80 @@
 	}
 	.qt-remove:hover { color: var(--color-accent-red); }
 
+	/* ── Accordion / subcategories ── */
+	.expand-btn {
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: var(--color-text-muted);
+		vertical-align: middle;
+		margin-right: 2px;
+	}
+	.expand-btn:disabled { opacity: 0.2; cursor: default; }
+	.expand-icon {
+		font-size: 14px;
+		transition: transform 150ms;
+		display: inline-block;
+		vertical-align: middle;
+	}
+	.expand-icon.expanded { transform: rotate(90deg); }
+	.subcat-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 238, 252, 0.1);
+		border: 1px solid rgba(0, 238, 252, 0.3);
+		color: var(--color-accent-cyan);
+		font-family: var(--font-mono);
+		font-size: 9px;
+		width: 18px;
+		height: 18px;
+		margin-left: 6px;
+		vertical-align: middle;
+	}
+	.subcat-row td { background: rgba(0, 238, 252, 0.02); }
+	.subcat-row:hover td { background: rgba(0, 238, 252, 0.05); }
+	.td-subcat {
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-secondary);
+		padding-left: calc(var(--space-md) + 28px);
+	}
+	.td-subcat.muted { color: var(--color-accent-red); opacity: 0.6; text-decoration: line-through; }
+	.subcat-indent {
+		color: var(--color-text-muted);
+		margin-right: 6px;
+	}
+	.override-badge {
+		display: inline-block;
+		margin-left: 6px;
+		padding: 1px 5px;
+		background: rgba(255, 193, 93, 0.1);
+		border: 1px solid rgba(255, 193, 93, 0.3);
+		color: var(--color-accent-gold);
+		font-family: var(--font-label);
+		font-size: 8px;
+		letter-spacing: 0.1em;
+		vertical-align: middle;
+	}
+	.td-subcat-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+	}
+	.btn-reset {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--color-text-muted);
+		font-size: 14px;
+		padding: 0;
+		line-height: 1;
+	}
+	.btn-reset:hover { color: var(--color-accent-cyan); }
+
 	.sections-block { margin-top: var(--space-2xl); }
 	.row-saving { opacity: 0.5; pointer-events: none; }
 	.row-disabled td { background: rgba(255, 115, 81, 0.04); }
@@ -463,9 +635,9 @@
 		flex-shrink: 0;
 	}
 	.icon-preview {
-		font-size: 16px;
+		font-size: 22px;
 		color: var(--color-accent-cyan);
-		width: 20px;
+		width: 26px;
 	}
 	.icon-input {
 		width: 120px;
