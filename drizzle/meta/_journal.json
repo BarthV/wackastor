@@ -15,6 +15,13 @@
       "when": 1774822870132,
       "tag": "0001_famous_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774897683169,
+      "tag": "0002_sparkling_steve_rogers",
+      "breakpoints": true
     }
   ]
 }
