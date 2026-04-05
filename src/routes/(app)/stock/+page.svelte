@@ -94,14 +94,12 @@
 
 	<div class="filters-bar">
 		<input type="text" bind:value={q} placeholder="RESSOURCE..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+		<div class="filter-quality">
+			<input type="number" bind:value={qualityMin} placeholder="MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+			<span class="filter-sep">–</span>
+			<input type="number" bind:value={qualityMax} placeholder="MAX" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+		</div>
 		<input type="text" bind:value={location} placeholder="LIEU..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-		<select bind:value={category} class="filter-select">
-			<option value="">TOUS_TYPES</option>
-			<option value="commodity">COMMODITE</option>
-			<option value="item">OBJET</option>
-			<option value="equipment">EQUIPEMENT</option>
-			<option value="other">AUTRE</option>
-		</select>
 		<div class="player-autocomplete">
 			<input
 				type="text"
@@ -128,11 +126,13 @@
 				</ul>
 			{/if}
 		</div>
-		<div class="filter-quality">
-			<input type="number" bind:value={qualityMin} placeholder="QUALITE_MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-			<span class="filter-sep">–</span>
-			<input type="number" bind:value={qualityMax} placeholder="MAX" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-		</div>
+		<select bind:value={category} class="filter-select">
+			<option value="">TOUS_TYPES</option>
+			<option value="commodity">COMMODITE</option>
+			<option value="item">OBJET</option>
+			<option value="equipment">EQUIPEMENT</option>
+			<option value="other">AUTRE</option>
+		</select>
 		<button class="btn-filter" onclick={applyFilters}>FILTRER</button>
 		{#if q || location || category || player || qualityMin || qualityMax}
 			<button class="btn-clear" onclick={clearFilters}>✕</button>

@@ -15,7 +15,6 @@
 	const navItems = [
 		{ href: '/stock', label: 'STOCKS', icon: 'inventory_2' },
 		{ href: '/inventory', label: 'INVENTAIRE', icon: 'package_2' },
-		{ href: '/commandes', label: 'COMMANDES', icon: 'list_alt' },
 		{ href: '/stats', label: 'STATS', icon: 'bar_chart' }
 	];
 
