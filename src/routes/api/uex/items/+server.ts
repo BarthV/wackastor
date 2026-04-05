@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	const conditions = [];
 	if (q) {
-		conditions.push(like(uexItems.name, `${escapeLike(q)}%`));
+		conditions.push(like(uexItems.name, `%${escapeLike(q)}%`));
 	}
 	if (category) {
 		conditions.push(eq(uexItems.category, category));

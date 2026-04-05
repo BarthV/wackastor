@@ -2,20 +2,23 @@
 	import SectionHeader from '$lib/components/ui/SectionHeader.svelte';
 	import { goto } from '$app/navigation';
 	import { formatQuantity } from '$lib/utils/formatQuantity.js';
-	import { page } from '$app/stores';
 
 	let { data } = $props();
 
-	let q = $state('');
-	let category = $state('');
-	let location = $state('');
-	let player = $state('');
+	let q = $state(data.filters.q);
+	let category = $state(data.filters.category);
+	let location = $state(data.filters.location);
+	let player = $state(data.filters.player);
+	let qualityMin = $state(data.filters.qualityMin);
+	let qualityMax = $state(data.filters.qualityMax);
 
 	$effect(() => {
 		q = data.filters.q;
 		category = data.filters.category;
 		location = data.filters.location;
 		player = data.filters.player;
+		qualityMin = data.filters.qualityMin;
+		qualityMax = data.filters.qualityMax;
 	});
 
 	function applyFilters() {
@@ -24,15 +27,14 @@
 		if (category) params.set('category', category);
 		if (location) params.set('location', location);
 		if (player) params.set('player', player);
+		if (qualityMin) params.set('quality_min', qualityMin);
+		if (qualityMax) params.set('quality_max', qualityMax);
 		const qs = params.toString();
 		goto(`/stock${qs ? '?' + qs : ''}`, { invalidateAll: true });
 	}
 
 	function clearFilters() {
-		q = '';
-		category = '';
-		location = '';
-		player = '';
+		q = ''; category = ''; location = ''; player = ''; qualityMin = ''; qualityMax = '';
 		goto('/stock', { invalidateAll: true });
 	}
 </script>
@@ -42,50 +44,33 @@
 </svelte:head>
 
 <div class="stock-page">
-	<div class="page-top">
-		<div class="page-title-area">
-			<SectionHeader title="STOCK DE CORPO" />
-			<div class="page-status">
-				<span class="status-dot"></span>
-				<span class="status-label">SYSTEME OPERATIONNEL</span>
-				<span class="status-sep">/</span>
-				<span class="status-label">DEPOT CENTRAL</span>
-			</div>
-		</div>
-		<div class="page-actions">
-			<div class="search-wrap">
-				<span class="material-symbols-outlined search-icon">search</span>
-				<input
-					type="text"
-					bind:value={q}
-					placeholder="RECHERCHER_STOCK..."
-					class="search-input"
-					onkeydown={(e) => { if (e.key === 'Enter') applyFilters(); }}
-				/>
-			</div>
-			<div class="action-buttons">
-				<button class="btn-action" onclick={applyFilters}>FILTRER</button>
-				<button class="btn-action" onclick={clearFilters}>EFFACER</button>
-			</div>
-		</div>
-	</div>
+	<SectionHeader title="STOCK DE CORPO" />
 
-	<div class="filter-tabs">
-		<button
-			class="tab"
-			class:active={!category}
-			onclick={() => { category = ''; applyFilters(); }}
-		>TOUT</button>
-		<button
-			class="tab"
-			class:active={category === 'commodity'}
-			onclick={() => { category = 'commodity'; applyFilters(); }}
-		>COMMODITIES</button>
-		<button
-			class="tab"
-			class:active={category === 'item'}
-			onclick={() => { category = 'item'; applyFilters(); }}
-		>EQUIPEMENT</button>
+	<div class="filters-bar">
+		<input type="text" bind:value={q} placeholder="RESSOURCE..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+		<input type="text" bind:value={location} placeholder="LIEU..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+		<select bind:value={category} class="filter-select">
+			<option value="">TOUS_TYPES</option>
+			<option value="commodity">COMMODITE</option>
+			<option value="item">OBJET</option>
+			<option value="equipment">EQUIPEMENT</option>
+			<option value="other">AUTRE</option>
+		</select>
+		<select bind:value={player} class="filter-select">
+			<option value="">TOUS_JOUEURS</option>
+			{#each data.players as p}
+				<option value={p.id}>{p.username.toUpperCase()}</option>
+			{/each}
+		</select>
+		<div class="filter-quality">
+			<input type="number" bind:value={qualityMin} placeholder="QUALITE_MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+			<span class="filter-sep">–</span>
+			<input type="number" bind:value={qualityMax} placeholder="MAX" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+		</div>
+		<button class="btn-filter" onclick={applyFilters}>FILTRER</button>
+		{#if q || location || category || player || qualityMin || qualityMax}
+			<button class="btn-clear" onclick={clearFilters}>✕</button>
+		{/if}
 	</div>
 
 	{#if data.items.length === 0}
@@ -149,120 +134,60 @@
 		gap: var(--space-lg);
 	}
 
-	/* ── Page top ── */
-	.page-top {
+	/* ── Filters bar ── */
+	.filters-bar {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: space-between;
-		align-items: flex-end;
-		gap: var(--space-lg);
-	}
-	.page-title-area {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-sm);
-	}
-	.page-status {
-		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
-		font-size: var(--font-size-xs);
-		font-family: var(--font-label);
-		color: var(--color-text-secondary);
-		letter-spacing: 0.15em;
-		text-transform: uppercase;
 	}
-	.status-dot {
-		width: 6px;
-		height: 6px;
-		background: var(--color-accent-green);
-	}
-	.status-sep {
-		color: var(--color-border);
-	}
-	.page-actions {
-		display: flex;
-		align-items: center;
-		gap: var(--space-md);
-	}
-	.search-wrap {
-		position: relative;
-		width: 320px;
-	}
-	.search-icon {
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		font-size: 20px;
-		color: rgba(255, 193, 93, 0.5);
-	}
-	.search-input {
-		width: 100%;
+	.filter-input {
+		padding: 7px 10px;
 		background: var(--color-bg-secondary);
 		border: none;
 		border-bottom: 2px solid var(--color-border);
 		color: var(--color-text-primary);
+		font-family: var(--font-mono);
 		font-size: var(--font-size-sm);
-		text-transform: uppercase;
-		letter-spacing: 0.15em;
-		padding: 12px 12px 12px 44px;
-		outline: none;
-		font-family: var(--font-body);
+		min-width: 140px;
 	}
-	.search-input:focus {
-		border-bottom-color: var(--color-accent-cyan);
-	}
-	.search-input::placeholder {
-		color: var(--color-border);
-	}
-	.action-buttons {
-		display: flex;
-		gap: var(--space-sm);
-	}
-	.btn-action {
-		background: var(--color-bg-panel);
-		padding: 8px 16px;
-		font-size: var(--font-size-xs);
-		font-weight: 700;
-		font-family: var(--font-label);
-		color: var(--color-accent-gold);
-		border: 1px solid var(--color-border-dim);
-		text-transform: uppercase;
-		letter-spacing: 0.15em;
-		cursor: pointer;
-	}
-	.btn-action:hover {
-		background: rgba(255, 193, 93, 0.1);
-	}
-
-	/* ── Filter tabs ── */
-	.filter-tabs {
-		display: flex;
-		gap: var(--space-md);
-		border-bottom: 1px solid rgba(72, 72, 73, 0.3);
-		padding-bottom: 2px;
-	}
-	.tab {
-		background: none;
+	.filter-input-sm { min-width: 80px; width: 80px; }
+	.filter-input:focus { outline: none; border-bottom-color: var(--color-accent-cyan); }
+	.filter-input::placeholder { color: var(--color-border); font-size: var(--font-size-xs); }
+	.filter-select {
+		padding: 7px 10px;
+		background: var(--color-bg-secondary);
 		border: none;
-		border-bottom: 2px solid transparent;
-		padding: 6px var(--space-md);
+		border-bottom: 2px solid var(--color-border);
+		color: var(--color-text-secondary);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		letter-spacing: 0.1em;
+	}
+	.filter-select:focus { outline: none; border-bottom-color: var(--color-accent-cyan); }
+	.filter-quality { display: flex; align-items: center; gap: 4px; }
+	.filter-sep { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+	.btn-filter {
+		padding: 7px 16px;
+		border: 1px solid var(--color-accent-cyan);
+		color: var(--color-accent-cyan);
+		background: transparent;
+		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
-		font-family: var(--font-label);
 		letter-spacing: 0.15em;
-		color: var(--color-text-secondary);
-		text-transform: uppercase;
 		cursor: pointer;
 	}
-	.tab:hover {
-		color: var(--color-text-primary);
+	.btn-filter:hover { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+	.btn-clear {
+		padding: 7px 10px;
+		border: none;
+		background: transparent;
+		color: var(--color-text-muted);
+		cursor: pointer;
+		font-size: var(--font-size-sm);
 	}
-	.tab.active {
-		color: var(--color-accent-cyan);
-		border-bottom-color: var(--color-accent-cyan);
-	}
+	.btn-clear:hover { color: var(--color-accent-red); }
 
 	/* ── Table ── */
 	.stock-table {

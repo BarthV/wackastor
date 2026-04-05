@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db/index.js';
 import { inventoryItems, users, itemSectionConfigs } from '$lib/server/db/schema/index.js';
 import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
-import { eq, and, like } from 'drizzle-orm';
+import { eq, and, like, gte, lte } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -9,8 +9,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const q = url.searchParams.get('q')?.trim().toLowerCase();
 	const category = url.searchParams.get('category');
-	const location = url.searchParams.get('location');
+	const location = url.searchParams.get('location')?.trim().toLowerCase();
 	const player = url.searchParams.get('player');
+	const qualityMin = url.searchParams.get('quality_min');
+	const qualityMax = url.searchParams.get('quality_max');
 
 	const conditions = [
 		eq(inventoryItems.corpId, corpId),
@@ -21,6 +23,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	if (category) conditions.push(eq(inventoryItems.category, category));
 	if (location) conditions.push(like(inventoryItems.locationName, `%${escapeLike(location)}%`));
 	if (player) conditions.push(eq(inventoryItems.userId, player));
+	if (qualityMin) conditions.push(gte(inventoryItems.quality, Number(qualityMin)));
+	if (qualityMax) conditions.push(lte(inventoryItems.quality, Number(qualityMax)));
 
 	const items = await db
 		.select({
@@ -55,6 +59,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		items,
 		players: [...playerMap.values()],
-		filters: { q: q ?? '', category: category ?? '', location: location ?? '', player: player ?? '' }
+		filters: { q: q ?? '', category: category ?? '', location: location ?? '', player: player ?? '', qualityMin: qualityMin ?? '', qualityMax: qualityMax ?? '' }
 	};
 };
