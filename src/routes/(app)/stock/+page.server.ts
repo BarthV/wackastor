@@ -31,7 +31,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			quantity: inventoryItems.quantity,
 			unit: inventoryItems.unit,
 			locationName: inventoryItems.locationName,
-			notes: inventoryItems.notes,
+			quality: inventoryItems.quality,
 			userId: inventoryItems.userId,
 			username: users.discordUsername,
 			userAvatar: users.discordAvatar,

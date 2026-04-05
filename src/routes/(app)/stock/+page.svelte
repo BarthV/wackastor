@@ -99,9 +99,9 @@
 					<tr>
 						<th>ITEM</th>
 						<th class="th-right">QUANTITE</th>
+						<th>QUALITE</th>
 						<th>LOCALISATION</th>
 						<th>PROPRIETAIRE</th>
-						<th>NOTES</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -121,6 +121,9 @@
 								<span class="qty-value">{formatQuantity(item.quantity, item.unit)}</span>
 							</td>
 							<td>
+								<span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span>
+							</td>
+							<td>
 								<span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span>
 							</td>
 							<td>
@@ -130,9 +133,6 @@
 									rel="noopener"
 									class="player-link"
 								>{item.username.toUpperCase()}</a>
-							</td>
-							<td>
-								<span class="notes-value">{item.notes?.toUpperCase().replace(/ /g, '_') || ''}</span>
 							</td>
 						</tr>
 					{/each}
@@ -347,9 +347,10 @@
 	.player-link:hover {
 		color: var(--color-accent-cyan);
 	}
-	.notes-value {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-secondary);
+	.quality-value {
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		color: var(--color-text-primary);
 	}
 
 	/* ── Empty state ── */
