@@ -1,7 +1,8 @@
 <script lang="ts">
 	import SectionHeader from '$lib/components/ui/SectionHeader.svelte';
 	import TerminalCard from '$lib/components/ui/TerminalCard.svelte';
-	import ItemForm from '$lib/components/inventory/ItemForm.svelte';
+	import MultiItemForm from '$lib/components/inventory/MultiItemForm.svelte';
+	import Autocomplete from '$lib/components/ui/Autocomplete.svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { formatQuantity } from '$lib/utils/formatQuantity.js';
@@ -39,23 +40,102 @@
 		goto('/inventory', { invalidateAll: true });
 	}
 
-	async function handleCreate(formData: Record<string, unknown>) {
-		const resp = await fetch('/api/inventory', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(formData)
-		});
+	async function handleCreate(items: Record<string, unknown>[]) {
+		await Promise.all(
+			items.map((item) =>
+				fetch('/api/inventory', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(item)
+				})
+			)
+		);
+		showForm = false;
+		invalidateAll();
+	}
+
+	let pendingDeleteId = $state<string | null>(null);
+
+	function confirmDelete(e: MouseEvent, id: string) {
+		e.stopPropagation();
+		pendingDeleteId = id;
+	}
+
+	function cancelDelete() {
+		pendingDeleteId = null;
+	}
+
+	async function executeDelete() {
+		if (!pendingDeleteId) return;
+		const resp = await fetch(`/api/inventory/${pendingDeleteId}`, { method: 'DELETE' });
 		if (resp.ok) {
-			showForm = false;
+			const next = new Set(selectedIds);
+			next.delete(pendingDeleteId);
+			selectedIds = next;
+			pendingDeleteId = null;
 			invalidateAll();
 		}
 	}
 
-	async function handleDelete(id: string) {
-		const resp = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
-		if (resp.ok) {
-			invalidateAll();
+	// -- Multi-select & move --
+	let selectedIds = $state(new Set<string>());
+	let showMoveDialog = $state(false);
+	let moveLocationName = $state('');
+	let moveLocationId = $state<number | null>(null);
+	let moveLocationType = $state<string | null>(null);
+
+	const allSelected = $derived(data.items.length > 0 && data.items.every((i) => selectedIds.has(i.id)));
+
+	function toggleSelect(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedIds = next;
+	}
+
+	function toggleAll() {
+		if (allSelected) {
+			selectedIds = new Set();
+		} else {
+			selectedIds = new Set(data.items.map((i) => i.id));
 		}
+	}
+
+	function openMoveDialog() {
+		moveLocationName = '';
+		moveLocationId = null;
+		moveLocationType = null;
+		showMoveDialog = true;
+	}
+
+	function closeMoveDialog() {
+		showMoveDialog = false;
+	}
+
+	function handleMoveLocationSelect(item: Record<string, unknown>) {
+		moveLocationName = item.name as string;
+		moveLocationId = item.id as number;
+		moveLocationType = item._kind === 'location' ? (item.type as string) : 'terminal';
+	}
+
+	async function executeMove() {
+		if (!moveLocationName || selectedIds.size === 0) return;
+		await Promise.all(
+			[...selectedIds].map((id) =>
+				fetch(`/api/inventory/${id}`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						locationName: moveLocationName,
+						locationId: moveLocationId,
+						locationType: moveLocationType
+					})
+				})
+			)
+		);
+		selectedIds = new Set();
+		showMoveDialog = false;
+		invalidateAll();
 	}
 </script>
 
@@ -93,8 +173,8 @@
 	</div>
 
 	{#if showForm}
-		<TerminalCard title="DECLARER_UN_OBJET">
-			<ItemForm mode="create" onSubmit={handleCreate} onCancel={() => showForm = false} />
+		<TerminalCard title="DECLARER_DES_OBJETS">
+			<MultiItemForm onSubmit={handleCreate} onCancel={() => showForm = false} />
 		</TerminalCard>
 	{/if}
 
@@ -103,10 +183,23 @@
 			<p class="empty-text">Aucun objet declare. Utilisez le bouton "CREER" pour commencer.</p>
 		</div>
 	{:else}
+		{#if selectedIds.size > 0}
+			<div class="selection-bar">
+				<span class="selection-count">{selectedIds.size} selectionne(s)</span>
+				<button class="btn-move" onclick={openMoveDialog} title="Deplacer">
+					<span class="material-symbols-outlined">local_shipping</span>
+					DEPLACER
+				</button>
+			</div>
+		{/if}
+
 		<div class="inventory-table clipped-corner">
 			<table>
 				<thead>
 					<tr>
+						<th class="th-check">
+							<input type="checkbox" checked={allSelected} onchange={toggleAll} />
+						</th>
 						<th>ITEM</th>
 						<th class="th-right">QUANTITE</th>
 						<th class="th-right">QUALITE</th>
@@ -117,7 +210,10 @@
 				</thead>
 				<tbody>
 					{#each data.items as item}
-						<tr onclick={() => goto(`/inventory/${item.id}${$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}`)} class="tr-clickable">
+						<tr onclick={() => goto(`/inventory/${item.id}${$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}`)} class="tr-clickable" class:row-selected={selectedIds.has(item.id)}>
+							<td class="td-check" onclick={(e) => e.stopPropagation()}>
+								<input type="checkbox" checked={selectedIds.has(item.id)} onchange={() => toggleSelect(item.id)} />
+							</td>
 							<td>
 								<span class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</span>
 							</td>
@@ -127,14 +223,67 @@
 							<td><span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span></td>
 							<td>
 								<div class="actions">
-									<a href="/inventory/{item.id}{$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}" class="action-link">MODIFIER</a>
-									<button class="action-delete" onclick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>SUPPRIMER</button>
+									<a href="/inventory/{item.id}{$page.url.search ? '?back=' + encodeURIComponent($page.url.search) : ''}" class="action-icon" title="Modifier" onclick={(e) => e.stopPropagation()}>
+										<span class="material-symbols-outlined">edit</span>
+									</a>
+									<button class="action-icon action-icon-delete" title="Supprimer" onclick={(e) => confirmDelete(e, item.id)}>
+										<span class="material-symbols-outlined">delete</span>
+									</button>
 								</div>
 							</td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
+		</div>
+	{/if}
+
+	{#if pendingDeleteId}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_autofocus -->
+		<div
+			class="confirm-overlay"
+			tabindex="-1"
+			autofocus
+			onkeydown={(e) => { if (e.key === 'Escape') cancelDelete(); else if (e.key === 'Enter') executeDelete(); }}
+			onclick={cancelDelete}
+		>
+			<div class="confirm-dialog clipped-corner" onclick={(e) => e.stopPropagation()}>
+				<p class="confirm-text">CONFIRMER LA SUPPRESSION ?</p>
+				<div class="confirm-actions">
+					<button class="btn-cancel-dialog" onclick={cancelDelete}>ANNULER</button>
+					<button class="btn-confirm-delete" onclick={executeDelete}>SUPPRIMER</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if showMoveDialog}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="confirm-overlay"
+			onkeydown={(e) => { if (e.key === 'Escape') closeMoveDialog(); }}
+			onclick={closeMoveDialog}
+		>
+			<div class="confirm-dialog move-dialog clipped-corner" onclick={(e) => e.stopPropagation()}>
+				<p class="move-title">
+					<span class="material-symbols-outlined move-icon">local_shipping</span>
+					DEPLACER {selectedIds.size} OBJET(S)
+				</p>
+				<div class="move-field">
+					<label class="move-label">NOUVELLE LOCALISATION</label>
+					<Autocomplete
+						endpoint="/api/uex/locations"
+						placeholder="Rechercher un lieu..."
+						value={moveLocationName}
+						onSelect={handleMoveLocationSelect}
+					/>
+				</div>
+				<div class="confirm-actions">
+					<button class="btn-cancel-dialog" onclick={closeMoveDialog}>ANNULER</button>
+					<button class="btn-confirm-move" onclick={executeMove} disabled={!moveLocationName}>DEPLACER</button>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>
@@ -270,23 +419,153 @@
 	.qty-value { font-family: var(--font-mono); color: var(--color-accent-cyan); }
 	.quality-value { font-family: var(--font-mono); color: var(--color-text-primary); }
 	.loc-value { font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase; color: var(--color-text-secondary); }
-	.actions { display: flex; gap: var(--space-sm); }
-	.action-link {
-		font-size: var(--font-size-xs);
-		font-family: var(--font-label);
-		color: var(--color-accent-cyan);
-		text-decoration: none;
-		letter-spacing: 0.05em;
-	}
-	.action-link:hover { text-decoration: underline; }
-	.action-delete {
-		font-size: var(--font-size-xs);
-		font-family: var(--font-label);
-		color: var(--color-text-muted);
+	.actions { display: flex; gap: var(--space-xs); align-items: center; }
+	.action-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 4px;
 		background: none;
 		border: none;
+		color: var(--color-text-muted);
 		cursor: pointer;
-		letter-spacing: 0.05em;
+		text-decoration: none;
 	}
-	.action-delete:hover { color: var(--color-accent-red); }
+	.action-icon :global(.material-symbols-outlined) { font-size: 18px; }
+	.action-icon:hover { color: var(--color-accent-cyan); }
+	.action-icon-delete:hover { color: var(--color-accent-red); }
+
+	/* -- Selection -- */
+	.th-check, .td-check { width: 42px; text-align: center; }
+	.td-check input, .th-check input { cursor: pointer; accent-color: var(--color-accent-cyan); width: 16px; height: 16px; }
+	.row-selected { background: rgba(94, 234, 212, 0.06); }
+	.row-selected:hover { background: rgba(94, 234, 212, 0.1); }
+	.selection-bar {
+		display: flex;
+		align-items: center;
+		gap: var(--space-md);
+		padding: var(--space-sm) var(--space-md);
+		background: rgba(94, 234, 212, 0.08);
+		border: 1px solid rgba(94, 234, 212, 0.2);
+	}
+	.selection-count {
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		color: var(--color-accent-cyan);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+	.btn-move {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		padding: 4px 12px;
+		background: transparent;
+		border: 1px solid var(--color-accent-cyan);
+		color: var(--color-accent-cyan);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		cursor: pointer;
+	}
+	.btn-move :global(.material-symbols-outlined) { font-size: 16px; }
+	.btn-move:hover { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+
+	/* -- Move dialog -- */
+	.move-dialog { min-width: 380px; }
+	.move-title {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+		font-family: var(--font-label);
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--color-accent-cyan);
+		letter-spacing: 0.1em;
+		text-align: center;
+		justify-content: center;
+	}
+	.move-icon { font-size: 20px; }
+	.move-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+	.move-label {
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		color: var(--color-accent-gold);
+		letter-spacing: 0.15em;
+	}
+	.btn-confirm-move {
+		padding: var(--space-sm) var(--space-lg);
+		background: transparent;
+		border: 1px solid var(--color-accent-cyan);
+		color: var(--color-accent-cyan);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.btn-confirm-move:hover { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+	.btn-confirm-move:disabled { opacity: 0.4; cursor: not-allowed; }
+	.btn-confirm-move:disabled:hover { background: transparent; color: var(--color-accent-cyan); }
+
+	/* -- Confirm dialog -- */
+	.confirm-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		background: rgba(0, 0, 0, 0.6);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.confirm-dialog {
+		background: var(--color-bg-panel);
+		border: 1px solid var(--color-border-dim);
+		padding: var(--space-lg);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-md);
+		min-width: 300px;
+	}
+	.confirm-text {
+		font-family: var(--font-label);
+		font-size: var(--font-size-sm);
+		font-weight: 700;
+		color: var(--color-accent-red);
+		letter-spacing: 0.1em;
+		text-align: center;
+	}
+	.confirm-actions {
+		display: flex;
+		gap: var(--space-sm);
+		justify-content: center;
+	}
+	.btn-cancel-dialog {
+		padding: var(--space-sm) var(--space-lg);
+		background: transparent;
+		border: 1px solid var(--color-border);
+		color: var(--color-text-secondary);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.btn-cancel-dialog:hover { border-color: var(--color-text-primary); color: var(--color-text-primary); }
+	.btn-confirm-delete {
+		padding: var(--space-sm) var(--space-lg);
+		background: transparent;
+		border: 1px solid var(--color-accent-red);
+		color: var(--color-accent-red);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.btn-confirm-delete:hover { background: var(--color-accent-red); color: var(--color-bg-primary); }
 </style>
