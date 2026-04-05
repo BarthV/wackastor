@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db/index.js';
-import { inventoryItems, users, itemSectionConfigs } from '$lib/server/db/schema/index.js';
+import { inventoryItems, users, itemSectionConfigs, commodityUnitConfigs } from '$lib/server/db/schema/index.js';
 import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
-import { eq, and, like, gte, lte } from 'drizzle-orm';
+import { eq, and, like, gte, lte, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			category: inventoryItems.category,
 			section: inventoryItems.section,
 			quantity: inventoryItems.quantity,
-			unit: inventoryItems.unit,
+			unit: sql<string>`COALESCE(${commodityUnitConfigs.unit}, ${inventoryItems.unit})`.as('unit'),
 			locationName: inventoryItems.locationName,
 			quality: inventoryItems.quality,
 			userId: inventoryItems.userId,
@@ -46,6 +46,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.from(inventoryItems)
 		.innerJoin(users, eq(inventoryItems.userId, users.id))
 		.leftJoin(itemSectionConfigs, eq(inventoryItems.section, itemSectionConfigs.section))
+		.leftJoin(commodityUnitConfigs, eq(inventoryItems.uexCommodityId, commodityUnitConfigs.uexCommodityId))
 		.where(and(...conditions));
 
 	// Get unique players for filter dropdown

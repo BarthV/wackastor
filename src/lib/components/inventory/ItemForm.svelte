@@ -59,6 +59,7 @@
 		quality = 0;
 		hasQuality = false;
 		unit = DEFAULT_UNIT[category] ?? 'SCU';
+		if (unit !== 'SCU') quantity = Math.round(quantity);
 		uexCommodityId = null;
 		uexItemId = null;
 	}
@@ -139,7 +140,12 @@
 	<div class="form-row">
 		<div class="form-group flex-1">
 			<label class="form-label" for="item-qty">Quantite</label>
-			<input id="item-qty" type="number" bind:value={quantity} min="0" step="0.01" class="form-input" />
+			<div class="qty-row">
+				<input id="item-qty" type="number" bind:value={quantity} min="0" step={unit === 'SCU' ? '0.01' : '1'} class="form-input"
+				oninput={() => { if (unit !== 'SCU') quantity = Math.round(quantity); }}
+			/>
+				<span class="unit-badge">{unit}</span>
+			</div>
 		</div>
 		{#if hasQuality}
 			<div class="form-group flex-1">
@@ -199,6 +205,23 @@
 	.form-row {
 		display: flex;
 		gap: var(--space-md);
+	}
+	.qty-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+	}
+	.qty-row .form-input {
+		flex: 1;
+	}
+	.unit-badge {
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--color-accent-cyan);
+		text-transform: uppercase;
+		white-space: nowrap;
 	}
 	.flex-1 {
 		flex: 1;

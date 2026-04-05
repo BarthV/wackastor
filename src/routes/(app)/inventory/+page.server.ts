@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db/index.js';
-import { inventoryItems } from '$lib/server/db/schema/index.js';
+import { inventoryItems, commodityUnitConfigs } from '$lib/server/db/schema/index.js';
 import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
-import { eq, and, like, gte, lte } from 'drizzle-orm';
+import { eq, and, like, gte, lte, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -24,8 +24,29 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	if (qualityMax) conditions.push(lte(inventoryItems.quality, Number(qualityMax)));
 
 	const items = await db
-		.select()
+		.select({
+			id: inventoryItems.id,
+			userId: inventoryItems.userId,
+			corpId: inventoryItems.corpId,
+			uexCommodityId: inventoryItems.uexCommodityId,
+			uexItemId: inventoryItems.uexItemId,
+			name: inventoryItems.name,
+			customName: inventoryItems.customName,
+			category: inventoryItems.category,
+			section: inventoryItems.section,
+			quantity: inventoryItems.quantity,
+			unit: sql<string>`COALESCE(${commodityUnitConfigs.unit}, ${inventoryItems.unit})`.as('unit'),
+			locationId: inventoryItems.locationId,
+			locationType: inventoryItems.locationType,
+			locationName: inventoryItems.locationName,
+			quality: inventoryItems.quality,
+			notes: inventoryItems.notes,
+			createdAt: inventoryItems.createdAt,
+			updatedAt: inventoryItems.updatedAt,
+			deletedAt: inventoryItems.deletedAt
+		})
 		.from(inventoryItems)
+		.leftJoin(commodityUnitConfigs, eq(inventoryItems.uexCommodityId, commodityUnitConfigs.uexCommodityId))
 		.where(and(...conditions));
 
 	return {
