@@ -108,9 +108,9 @@
 				<thead>
 					<tr>
 						<th>ITEM</th>
-						<th>TYPE</th>
 						<th class="th-right">QUANTITE</th>
 						<th class="th-right">QUALITE</th>
+						<th>TYPE</th>
 						<th>LOCALISATION</th>
 						<th>ACTIONS</th>
 					</tr>
@@ -121,9 +121,9 @@
 							<td>
 								<span class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</span>
 							</td>
-							<td><span class="cat-value">{item.category.toUpperCase()}</span></td>
 							<td class="td-right"><span class="qty-value">{formatQuantity(item.quantity, item.unit)}</span></td>
 							<td class="td-right"><span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span></td>
+							<td><span class="cat-value">{item.category.toUpperCase()}</span></td>
 							<td><span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span></td>
 							<td>
 								<div class="actions">
@@ -239,7 +239,7 @@
 	thead { background: var(--color-bg-panel); }
 	th {
 		text-align: left;
-		padding: 10px var(--space-md);
+		padding: 5px var(--space-md);
 		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
@@ -251,7 +251,8 @@
 	}
 	.th-right { text-align: right; }
 	td {
-		padding: 10px var(--space-md);
+		padding: 5px var(--space-md);
+		height: 43px;
 		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
 		font-size: var(--font-size-sm);
 	}

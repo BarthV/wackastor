@@ -301,7 +301,7 @@
 	}
 	th {
 		text-align: left;
-		padding: 10px var(--space-md);
+		padding: 5px var(--space-md);
 		font-family: var(--font-label);
 		font-size: var(--font-size-xs);
 		font-weight: 700;
@@ -315,7 +315,8 @@
 		text-align: right;
 	}
 	td {
-		padding: 10px var(--space-md);
+		padding: 5px var(--space-md);
+		height: 43px;
 		border-bottom: 1px solid rgba(72, 72, 73, 0.1);
 		font-size: var(--font-size-sm);
 	}
