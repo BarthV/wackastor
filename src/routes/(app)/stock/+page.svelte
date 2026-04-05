@@ -12,11 +12,57 @@
 	let qualityMin = $state(data.filters.qualityMin);
 	let qualityMax = $state(data.filters.qualityMax);
 
+	// Player autocomplete
+	let playerQuery = $state(
+		data.players.find((p) => p.id === data.filters.player)?.username ?? ''
+	);
+	let playerResults = $state<typeof data.players>([]);
+	let playerOpen = $state(false);
+	let playerSelectedIndex = $state(-1);
+
+	function onPlayerInput() {
+		const val = playerQuery.trim().toLowerCase();
+		player = '';
+		if (val.length === 0) {
+			playerResults = [];
+			playerOpen = false;
+			return;
+		}
+		playerResults = data.players.filter((p) =>
+			p.username.toLowerCase().includes(val)
+		);
+		playerOpen = playerResults.length > 0;
+		playerSelectedIndex = -1;
+	}
+
+	function selectPlayer(p: (typeof data.players)[number]) {
+		player = p.id;
+		playerQuery = p.username;
+		playerOpen = false;
+	}
+
+	function onPlayerKeydown(e: KeyboardEvent) {
+		if (!playerOpen) return;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			playerSelectedIndex = Math.min(playerSelectedIndex + 1, playerResults.length - 1);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			playerSelectedIndex = Math.max(playerSelectedIndex - 1, 0);
+		} else if (e.key === 'Enter' && playerSelectedIndex >= 0) {
+			e.preventDefault();
+			selectPlayer(playerResults[playerSelectedIndex]);
+		} else if (e.key === 'Escape') {
+			playerOpen = false;
+		}
+	}
+
 	$effect(() => {
 		q = data.filters.q;
 		category = data.filters.category;
 		location = data.filters.location;
 		player = data.filters.player;
+		playerQuery = data.players.find((p) => p.id === data.filters.player)?.username ?? '';
 		qualityMin = data.filters.qualityMin;
 		qualityMax = data.filters.qualityMax;
 	});
@@ -34,7 +80,7 @@
 	}
 
 	function clearFilters() {
-		q = ''; category = ''; location = ''; player = ''; qualityMin = ''; qualityMax = '';
+		q = ''; category = ''; location = ''; player = ''; playerQuery = ''; qualityMin = ''; qualityMax = '';
 		goto('/stock', { invalidateAll: true });
 	}
 </script>
@@ -56,12 +102,32 @@
 			<option value="equipment">EQUIPEMENT</option>
 			<option value="other">AUTRE</option>
 		</select>
-		<select bind:value={player} class="filter-select">
-			<option value="">TOUS_JOUEURS</option>
-			{#each data.players as p}
-				<option value={p.id}>{p.username.toUpperCase()}</option>
-			{/each}
-		</select>
+		<div class="player-autocomplete">
+			<input
+				type="text"
+				bind:value={playerQuery}
+				oninput={onPlayerInput}
+				onkeydown={onPlayerKeydown}
+				onblur={() => setTimeout(() => { playerOpen = false; }, 200)}
+				onfocus={() => { if (playerResults.length > 0) playerOpen = true; }}
+				placeholder="JOUEUR..."
+				class="filter-input"
+				autocomplete="off"
+			/>
+			{#if playerOpen}
+				<ul class="player-results">
+					{#each playerResults as p, i}
+						<li
+							class="player-result"
+							class:selected={i === playerSelectedIndex}
+							onmousedown={() => selectPlayer(p)}
+							role="option"
+							aria-selected={i === playerSelectedIndex}
+						>{p.username.toUpperCase()}</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
 		<div class="filter-quality">
 			<input type="number" bind:value={qualityMin} placeholder="QUALITE_MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
 			<span class="filter-sep">–</span>
@@ -165,6 +231,37 @@
 		letter-spacing: 0.1em;
 	}
 	.filter-select:focus { outline: none; border-bottom-color: var(--color-accent-cyan); }
+	.player-autocomplete {
+		position: relative;
+	}
+	.player-results {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		min-width: 160px;
+		max-height: 200px;
+		overflow-y: auto;
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-top: none;
+		z-index: 100;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.player-result {
+		padding: 6px 10px;
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		letter-spacing: 0.1em;
+		cursor: pointer;
+	}
+	.player-result:hover,
+	.player-result.selected {
+		background: var(--color-bg-tertiary);
+		color: var(--color-accent-orange);
+	}
 	.filter-quality { display: flex; align-items: center; gap: 4px; }
 	.filter-sep { color: var(--color-text-muted); font-size: var(--font-size-xs); }
 	.btn-filter {
