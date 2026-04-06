@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { uexItems, itemSectionConfigs } from '$lib/server/db/schema/index.js';
-import { like, and, eq, or, isNull } from 'drizzle-orm';
+import { ilike, and, eq, or, isNull } from 'drizzle-orm';
 import { escapeLike } from '$lib/server/db/helpers.js';
 import type { RequestHandler } from './$types';
 
@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	const conditions = [];
 	if (q) {
-		conditions.push(like(uexItems.name, `%${escapeLike(q)}%`));
+		conditions.push(ilike(uexItems.name, `%${escapeLike(q)}%`));
 	}
 	if (category) {
 		conditions.push(eq(uexItems.category, category));

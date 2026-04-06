@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { uexLocations, uexTerminals } from '$lib/server/db/schema/index.js';
-import { like, and, eq, or } from 'drizzle-orm';
+import { ilike, and, eq, or } from 'drizzle-orm';
 import { escapeLike } from '$lib/server/db/helpers.js';
 import type { RequestHandler } from './$types';
 
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	// Search locations
 	const locationConditions = [];
 	if (q) {
-		locationConditions.push(like(uexLocations.name, `${escapeLike(q)}%`));
+		locationConditions.push(ilike(uexLocations.name, `${escapeLike(q)}%`));
 	}
 	if (type) {
 		locationConditions.push(eq(uexLocations.type, type as 'planet' | 'moon' | 'space_station' | 'city' | 'outpost'));
@@ -47,7 +47,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				planetName: uexTerminals.planetName
 			})
 			.from(uexTerminals)
-			.where(or(like(uexTerminals.name, `${escapeLike(q)}%`), like(uexTerminals.fullname, `${escapeLike(q)}%`)))
+			.where(or(ilike(uexTerminals.name, `${escapeLike(q)}%`), ilike(uexTerminals.fullname, `${escapeLike(q)}%`)))
 			.limit(limit);
 	}
 

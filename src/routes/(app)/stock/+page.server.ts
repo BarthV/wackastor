@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db/index.js';
 import { inventoryItems, users, itemSectionConfigs, commodityUnitConfigs } from '$lib/server/db/schema/index.js';
 import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
-import { eq, and, like, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, ilike, gte, lte, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -19,9 +19,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		activeInventory
 	];
 
-	if (q) conditions.push(like(inventoryItems.name, `%${escapeLike(q)}%`));
+	if (q) conditions.push(ilike(inventoryItems.name, `%${escapeLike(q)}%`));
 	if (category) conditions.push(eq(inventoryItems.category, category));
-	if (location) conditions.push(like(inventoryItems.locationName, `%${escapeLike(location)}%`));
+	if (location) conditions.push(ilike(inventoryItems.locationName, `%${escapeLike(location)}%`));
 	if (player) conditions.push(eq(inventoryItems.userId, player));
 	if (qualityMin) conditions.push(gte(inventoryItems.quality, Number(qualityMin)));
 	if (qualityMax) conditions.push(lte(inventoryItems.quality, Number(qualityMax)));
