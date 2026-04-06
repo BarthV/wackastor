@@ -202,7 +202,7 @@
 						</th>
 						<th>ITEM</th>
 						<th class="th-right">QUANTITE</th>
-						<th class="th-right">QUALITE</th>
+						<th>QUALITE</th>
 						<th>TYPE</th>
 						<th>LOCALISATION</th>
 						<th>ACTIONS</th>
@@ -218,7 +218,7 @@
 								<span class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</span>
 							</td>
 							<td class="td-right"><span class="qty-value">{formatQuantity(item.quantity, item.unit)}</span></td>
-							<td class="td-right"><span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span></td>
+							<td><span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span></td>
 							<td><span class="cat-value">{item.category.toUpperCase()}</span></td>
 							<td><span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span></td>
 							<td>
