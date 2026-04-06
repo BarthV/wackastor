@@ -184,7 +184,7 @@
 					<td class="kind">{commodity.kind}</td>
 					<td class="unit-cell">
 						<div class="unit-buttons">
-							{#each ['SCU', 'cSCU', 'unit'] as u}
+							{#each ['SCU', 'unit'] as u}
 								<button
 									class="unit-btn"
 									class:active={commodity.unit === u}
