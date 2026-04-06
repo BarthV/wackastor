@@ -118,6 +118,19 @@
 		moveLocationType = item._kind === 'location' ? (item.type as string) : 'terminal';
 	}
 
+	let showBulkDeleteConfirm = $state(false);
+
+	async function executeDeleteSelected() {
+		await Promise.all(
+			[...selectedIds].map((id) =>
+				fetch(`/api/inventory/${id}`, { method: 'DELETE' })
+			)
+		);
+		selectedIds = new Set();
+		showBulkDeleteConfirm = false;
+		invalidateAll();
+	}
+
 	async function executeMove() {
 		if (!moveLocationName || selectedIds.size === 0) return;
 		await Promise.all(
@@ -190,6 +203,10 @@
 					<span class="material-symbols-outlined">local_shipping</span>
 					DEPLACER
 				</button>
+				<button class="btn-delete-sel" onclick={() => showBulkDeleteConfirm = true} title="Supprimer">
+					<span class="material-symbols-outlined">delete</span>
+					SUPPRIMER
+				</button>
 			</div>
 		{/if}
 
@@ -253,6 +270,23 @@
 				<div class="confirm-actions">
 					<button class="btn-cancel-dialog" onclick={cancelDelete}>ANNULER</button>
 					<button class="btn-confirm-delete" onclick={executeDelete}>SUPPRIMER</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if showBulkDeleteConfirm}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="confirm-overlay"
+			onkeydown={(e) => { if (e.key === 'Escape') showBulkDeleteConfirm = false; else if (e.key === 'Enter') executeDeleteSelected(); }}
+			onclick={() => showBulkDeleteConfirm = false}
+		>
+			<div class="confirm-dialog clipped-corner" onclick={(e) => e.stopPropagation()}>
+				<p class="confirm-text">SUPPRIMER {selectedIds.size} OBJET(S) ?</p>
+				<div class="confirm-actions">
+					<button class="btn-cancel-dialog" onclick={() => showBulkDeleteConfirm = false}>ANNULER</button>
+					<button class="btn-confirm-delete" onclick={executeDeleteSelected}>SUPPRIMER</button>
 				</div>
 			</div>
 		</div>
@@ -472,6 +506,22 @@
 	}
 	.btn-move :global(.material-symbols-outlined) { font-size: 16px; }
 	.btn-move:hover { background: var(--color-accent-cyan); color: var(--color-bg-primary); }
+	.btn-delete-sel {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		padding: 4px 12px;
+		background: transparent;
+		border: 1px solid var(--color-accent-red);
+		color: var(--color-accent-red);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		cursor: pointer;
+	}
+	.btn-delete-sel :global(.material-symbols-outlined) { font-size: 16px; }
+	.btn-delete-sel:hover { background: var(--color-accent-red); color: var(--color-bg-primary); }
 
 	/* -- Move dialog -- */
 	.move-dialog { min-width: 380px; }
