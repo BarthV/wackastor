@@ -1,7 +1,7 @@
-import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, bigint, real, primaryKey, serial, boolean } from 'drizzle-orm/pg-core';
 
 // -- UEXcorp commodities: synced from /commodities endpoint
-export const uexCommodities = sqliteTable('uex_commodities', {
+export const uexCommodities = pgTable('uex_commodities', {
 	id: integer('id').primaryKey(),
 	idParent: integer('id_parent').notNull(),
 	name: text('name').notNull(),
@@ -21,7 +21,7 @@ export const uexCommodities = sqliteTable('uex_commodities', {
 });
 
 // -- UEXcorp item categories: derived from items sync
-export const uexItemCategories = sqliteTable('uex_item_categories', {
+export const uexItemCategories = pgTable('uex_item_categories', {
 	id: integer('id').primaryKey(),
 	name: text('name').notNull(),
 	section: text('section').notNull(),
@@ -29,7 +29,7 @@ export const uexItemCategories = sqliteTable('uex_item_categories', {
 });
 
 // -- UEXcorp items: synced per category from /items?id_category=N
-export const uexItems = sqliteTable('uex_items', {
+export const uexItems = pgTable('uex_items', {
 	id: integer('id').primaryKey(),
 	idCategory: integer('id_category').notNull(),
 	idCompany: integer('id_company').notNull().default(0),
@@ -49,7 +49,7 @@ export const uexItems = sqliteTable('uex_items', {
 
 // -- UEXcorp locations: merged from /planets, /moons, /space_stations, /cities, /outposts
 // Composite PK (id, type) to handle potential ID collisions across endpoints
-export const uexLocations = sqliteTable(
+export const uexLocations = pgTable(
 	'uex_locations',
 	{
 		id: integer('id').notNull(),
@@ -69,7 +69,7 @@ export const uexLocations = sqliteTable(
 );
 
 // -- UEXcorp terminals: synced from /terminals endpoint
-export const uexTerminals = sqliteTable('uex_terminals', {
+export const uexTerminals = pgTable('uex_terminals', {
 	id: integer('id').primaryKey(),
 	idStarSystem: integer('id_star_system').notNull().default(0),
 	idPlanet: integer('id_planet').notNull().default(0),
@@ -95,38 +95,38 @@ export const uexTerminals = sqliteTable('uex_terminals', {
 });
 
 // -- Item section config: superadmin-defined category mapping for UEX item sections
-export const itemSectionConfigs = sqliteTable('item_section_configs', {
+export const itemSectionConfigs = pgTable('item_section_configs', {
 	section: text('section').primaryKey(),
 	category: text('category', { enum: ['item', 'equipment'] }).notNull().default('item'),
-	disabled: integer('disabled', { mode: 'boolean' }).notNull().default(false),
+	disabled: boolean('disabled').notNull().default(false),
 	icon: text('icon').notNull().default('category')
 });
 
 // -- Item subcategory config: per-UEX-category overrides within a section
-export const itemSubcategoryConfigs = sqliteTable('item_subcategory_configs', {
+export const itemSubcategoryConfigs = pgTable('item_subcategory_configs', {
 	category: text('category').primaryKey(), // UEX category name (e.g. "Gadgets")
 	wackCategory: text('wack_category', { enum: ['item', 'equipment'] }).notNull().default('item'),
-	disabled: integer('disabled', { mode: 'boolean' }).notNull().default(false)
+	disabled: boolean('disabled').notNull().default(false)
 });
 
 // -- Commodity quality config: superadmin-defined list of commodities that have a quality level
-export const commodityQualityConfigs = sqliteTable('commodity_quality_configs', {
+export const commodityQualityConfigs = pgTable('commodity_quality_configs', {
 	uexCommodityId: integer('uex_commodity_id').primaryKey()
 });
 
 // -- Commodity unit config: superadmin-defined unit per UEX commodity (not overwritten by sync)
-export const commodityUnitConfigs = sqliteTable('commodity_unit_configs', {
+export const commodityUnitConfigs = pgTable('commodity_unit_configs', {
 	uexCommodityId: integer('uex_commodity_id').primaryKey(),
 	unit: text('unit', { enum: ['SCU', 'cSCU', 'unit'] }).notNull().default('SCU')
 });
 
 // -- Sync log: tracks each sync run for monitoring
-export const uexSyncLog = sqliteTable('uex_sync_log', {
-	id: integer('id').primaryKey({ autoIncrement: true }),
+export const uexSyncLog = pgTable('uex_sync_log', {
+	id: serial('id').primaryKey(),
 	resource: text('resource').notNull(),
 	status: text('status', { enum: ['success', 'partial', 'error'] }).notNull(),
 	recordCount: integer('record_count').notNull().default(0),
 	durationMs: integer('duration_ms').notNull().default(0),
 	errorMessage: text('error_message'),
-	syncedAt: integer('synced_at', { mode: 'number' }).notNull()
+	syncedAt: bigint('synced_at', { mode: 'number' }).notNull()
 });

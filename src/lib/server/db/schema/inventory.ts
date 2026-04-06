@@ -1,8 +1,8 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, bigint, real } from 'drizzle-orm/pg-core';
 import { users } from './auth.js';
 
 // -- Inventory declarations: items/commodities owned by players
-export const inventoryItems = sqliteTable('inventory_items', {
+export const inventoryItems = pgTable('inventory_items', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
 		.notNull()
@@ -28,8 +28,8 @@ export const inventoryItems = sqliteTable('inventory_items', {
 	quality: integer('quality').notNull().default(0),
 	// Optional notes
 	notes: text('notes'),
-	// Timestamps + soft delete
-	createdAt: integer('created_at', { mode: 'number' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
-	deletedAt: integer('deleted_at', { mode: 'number' })
+	// Timestamps + soft delete (stored as Unix ms)
+	createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+	updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+	deletedAt: bigint('deleted_at', { mode: 'number' })
 });

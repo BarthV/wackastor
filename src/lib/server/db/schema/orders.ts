@@ -1,9 +1,9 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, bigint, real } from 'drizzle-orm/pg-core';
 import { users } from './auth.js';
 import { inventoryItems } from './inventory.js';
 
 // -- Orders: resource requests from players
-export const orders = sqliteTable('orders', {
+export const orders = pgTable('orders', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
 		.notNull()
@@ -25,14 +25,14 @@ export const orders = sqliteTable('orders', {
 		.default('open'),
 	matchCount: integer('match_count').notNull().default(0),
 	notes: text('notes'),
-	// Timestamps + soft delete
-	createdAt: integer('created_at', { mode: 'number' }).notNull(),
-	updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
-	deletedAt: integer('deleted_at', { mode: 'number' })
+	// Timestamps + soft delete (stored as Unix ms)
+	createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+	updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+	deletedAt: bigint('deleted_at', { mode: 'number' })
 });
 
 // -- Order matches: links orders to inventory items that can fulfill them
-export const orderMatches = sqliteTable('order_matches', {
+export const orderMatches = pgTable('order_matches', {
 	id: text('id').primaryKey(),
 	orderId: text('order_id')
 		.notNull()
@@ -47,5 +47,5 @@ export const orderMatches = sqliteTable('order_matches', {
 	matchedUserId: text('matched_user_id')
 		.notNull()
 		.references(() => users.id),
-	createdAt: integer('created_at', { mode: 'number' }).notNull()
+	createdAt: bigint('created_at', { mode: 'number' }).notNull()
 });

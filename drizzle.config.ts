@@ -3,9 +3,12 @@ import { defineConfig } from 'drizzle-kit';
 export default defineConfig({
 	schema: './src/lib/server/db/schema/index.ts',
 	out: './drizzle',
-	dialect: 'sqlite',
+	dialect: 'postgresql',
 	dbCredentials: {
-		url: process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'file:local.db',
-		authToken: process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
+		// Non-pooling URL required for migrations (PgBouncer ne supporte pas les DDL)
+		url:
+			process.env.POSTGRES_URL_NON_POOLING ||
+			process.env.DATABASE_URL ||
+			'postgresql://postgres:postgres@localhost:5432/wackastor'
 	}
 });
