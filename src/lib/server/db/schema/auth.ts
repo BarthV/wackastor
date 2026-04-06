@@ -1,4 +1,4 @@
-import { pgTable, text, integer, bigint, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 // -- Users table: stores Discord-authenticated users
 export const users = pgTable('users', {
@@ -16,7 +16,7 @@ export const sessions = pgTable('sessions', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id),
-	expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
 	discordAccessToken: text('discord_access_token').notNull(),
 	discordRefreshToken: text('discord_refresh_token').notNull(),
 	discordTokenExpiresAt: bigint('discord_token_expires_at', { mode: 'number' }).notNull()
