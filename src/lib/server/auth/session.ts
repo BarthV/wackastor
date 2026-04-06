@@ -1,16 +1,11 @@
 import { Lucia, TimeSpan } from 'lucia';
-import { DrizzleSQLiteAdapter } from '@lucia-auth/adapter-drizzle';
+import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle';
 import { dev } from '$app/environment';
 import { db } from '$lib/server/db/index.js';
 import { users, sessions } from '$lib/server/db/schema/index.js';
 
-// -- Lucia adapter for Drizzle SQLite
-const adapter = new DrizzleSQLiteAdapter(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	db as any,
-	sessions,
-	users
-);
+// -- Lucia adapter for Drizzle PostgreSQL
+const adapter = new DrizzlePostgreSQLAdapter(db, sessions, users);
 
 // -- Lucia instance with Discord token attributes on sessions
 export const lucia = new Lucia(adapter, {
