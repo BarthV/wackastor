@@ -45,7 +45,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.from(inventoryItems)
 				.innerJoin(users, eq(inventoryItems.userId, users.id))
 				.where(activeItems)
-				.groupBy(inventoryItems.userId)
+				.groupBy(inventoryItems.userId, users.discordUsername, users.discordAvatar, users.discordId)
 				.orderBy(sql`count(*) desc`),
 
 			db
@@ -63,7 +63,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.from(orders)
 				.innerJoin(users, eq(orders.userId, users.id))
 				.where(activeOrders)
-				.groupBy(orders.userId)
+				.groupBy(orders.userId, users.discordUsername)
 				.orderBy(sql`count(*) desc`)
 		]);
 

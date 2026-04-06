@@ -92,7 +92,11 @@ async function main() {
 		}
 	}
 
-	console.log('\nMigration terminée.');
+	// Réinitialiser les séquences des colonnes serial après import de données avec IDs explicites
+	await pg`SELECT setval('uex_sync_log_id_seq', (SELECT COALESCE(MAX(id), 0) FROM uex_sync_log))`;
+	console.log('\nSéquences réinitialisées.');
+
+	console.log('Migration terminée.');
 	await pg.end();
 }
 
