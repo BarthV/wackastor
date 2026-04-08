@@ -342,6 +342,14 @@
 		width: 80px;
 		text-align: right;
 	}
+	.row-input-num::-webkit-outer-spin-button,
+	.row-input-num::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	.row-input-num[type=number] {
+		-moz-appearance: textfield;
+	}
 	.row-qty {
 		display: flex;
 		align-items: center;
