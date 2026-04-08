@@ -10,8 +10,8 @@
 	let activeTab = $state('reservations');
 
 	const tabs = [
-		{ key: 'reservations', label: 'RESERVATIONS' },
-		{ key: 'recherches', label: 'RECHERCHES' }
+		{ key: 'reservations', label: 'MES_RESERVATIONS' },
+		{ key: 'recherches', label: 'MES_RECHERCHES' }
 	];
 
 	function statusVariant(status: string): 'info' | 'success' | 'error' | 'default' {
