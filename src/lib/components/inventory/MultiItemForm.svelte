@@ -235,6 +235,7 @@
 				<button
 					type="button"
 					class="btn-remove"
+					tabindex="-1"
 					onclick={() => removeRow(index)}
 					aria-label="Supprimer cette ligne"
 				>✕</button>
