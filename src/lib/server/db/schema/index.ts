@@ -13,3 +13,4 @@ export {
 } from './uex.js';
 export { inventoryItems } from './inventory.js';
 export { orders, orderMatches } from './orders.js';
+export { reservations } from './reservations.js';
