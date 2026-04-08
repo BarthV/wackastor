@@ -1,9 +1,19 @@
 <script lang="ts">
 	import SectionHeader from '$lib/components/ui/SectionHeader.svelte';
-	import { goto } from '$app/navigation';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import AvailabilityBar from '$lib/components/ui/AvailabilityBar.svelte';
+	import ReservationModal from '$lib/components/reservations/ReservationModal.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { formatQuantity } from '$lib/utils/formatQuantity.js';
 
 	let { data } = $props();
+
+	let activeTab = $state('stock');
+
+	const tabs = [
+		{ key: 'stock', label: 'STOCK' },
+		{ key: 'reservations', label: 'RESERVATIONS' }
+	];
 
 	let q = $state(data.filters.q);
 	let category = $state(data.filters.category);
@@ -83,6 +93,22 @@
 		q = ''; category = ''; location = ''; player = ''; playerQuery = ''; qualityMin = ''; qualityMax = '';
 		goto('/stock', { invalidateAll: true });
 	}
+
+	// Reservation modal
+	type StockItem = typeof data.items[number];
+	let reservationTarget = $state<StockItem | null>(null);
+
+	async function handleReserve(payload: { inventoryItemId: string; quantity: number }) {
+		const resp = await fetch('/api/reservations', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+		reservationTarget = null;
+		if (resp.ok) {
+			invalidateAll();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -92,106 +118,189 @@
 <div class="stock-page">
 	<SectionHeader title="STOCK DE CORPO" />
 
-	<div class="filters-bar">
-		<input type="text" bind:value={q} placeholder="RESSOURCE..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-		<div class="filter-quality">
-			<input type="number" bind:value={qualityMin} placeholder="MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-			<span class="filter-sep">–</span>
-			<input type="number" bind:value={qualityMax} placeholder="MAX" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-		</div>
-		<input type="text" bind:value={location} placeholder="LIEU..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
-		<div class="player-autocomplete">
-			<input
-				type="text"
-				bind:value={playerQuery}
-				oninput={onPlayerInput}
-				onkeydown={onPlayerKeydown}
-				onblur={() => setTimeout(() => { playerOpen = false; }, 200)}
-				onfocus={() => { if (playerResults.length > 0) playerOpen = true; }}
-				placeholder="JOUEUR..."
-				class="filter-input"
-				autocomplete="off"
-			/>
-			{#if playerOpen}
-				<ul class="player-results">
-					{#each playerResults as p, i}
-						<li
-							class="player-result"
-							class:selected={i === playerSelectedIndex}
-							onmousedown={() => selectPlayer(p)}
-							role="option"
-							aria-selected={i === playerSelectedIndex}
-						>{p.username.toUpperCase()}</li>
-					{/each}
-				</ul>
+	<TabBar {tabs} active={activeTab} onSelect={(key) => (activeTab = key)} />
+
+	{#if activeTab === 'stock'}
+		<div class="filters-bar">
+			<input type="text" bind:value={q} placeholder="RESSOURCE..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+			<div class="filter-quality">
+				<input type="number" bind:value={qualityMin} placeholder="MIN" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+				<span class="filter-sep">–</span>
+				<input type="number" bind:value={qualityMax} placeholder="MAX" min="0" max="1000" class="filter-input filter-input-sm" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+			</div>
+			<input type="text" bind:value={location} placeholder="LIEU..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
+			<div class="player-autocomplete">
+				<input
+					type="text"
+					bind:value={playerQuery}
+					oninput={onPlayerInput}
+					onkeydown={onPlayerKeydown}
+					onblur={() => setTimeout(() => { playerOpen = false; }, 200)}
+					onfocus={() => { if (playerResults.length > 0) playerOpen = true; }}
+					placeholder="JOUEUR..."
+					class="filter-input"
+					autocomplete="off"
+				/>
+				{#if playerOpen}
+					<ul class="player-results">
+						{#each playerResults as p, i}
+							<li
+								class="player-result"
+								class:selected={i === playerSelectedIndex}
+								onmousedown={() => selectPlayer(p)}
+								role="option"
+								aria-selected={i === playerSelectedIndex}
+							>{p.username.toUpperCase()}</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			<select bind:value={category} class="filter-select">
+				<option value="">TOUS_TYPES</option>
+				<option value="commodity">COMMODITE</option>
+				<option value="item">OBJET</option>
+				<option value="equipment">EQUIPEMENT</option>
+				<option value="other">AUTRE</option>
+			</select>
+			<button class="btn-filter" onclick={applyFilters}>FILTRER</button>
+			{#if q || location || category || player || qualityMin || qualityMax}
+				<button class="btn-clear" onclick={clearFilters}>✕</button>
 			{/if}
 		</div>
-		<select bind:value={category} class="filter-select">
-			<option value="">TOUS_TYPES</option>
-			<option value="commodity">COMMODITE</option>
-			<option value="item">OBJET</option>
-			<option value="equipment">EQUIPEMENT</option>
-			<option value="other">AUTRE</option>
-		</select>
-		<button class="btn-filter" onclick={applyFilters}>FILTRER</button>
-		{#if q || location || category || player || qualityMin || qualityMax}
-			<button class="btn-clear" onclick={clearFilters}>✕</button>
-		{/if}
-	</div>
 
-	{#if data.items.length === 0}
-		<div class="empty-state">
-			<p class="empty-text">Aucun objet trouve avec ces filtres.</p>
-		</div>
-	{:else}
-		<div class="stock-table clipped-corner">
-			<table>
-				<thead>
-					<tr>
-						<th>ITEM</th>
-						<th class="th-right">QUANTITE</th>
-						<th>QUALITE</th>
-						<th>LOCALISATION</th>
-						<th>PROPRIETAIRE</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.items as item}
+		{#if data.items.length === 0}
+			<div class="empty-state">
+				<p class="empty-text">Aucun objet trouve avec ces filtres.</p>
+			</div>
+		{:else}
+			<div class="stock-table clipped-corner">
+				<table>
+					<thead>
 						<tr>
-							<td>
-								<div class="item-cell">
-									<div class="item-icon">
-										<span class="material-symbols-outlined">{item.sectionIcon ?? (item.category === 'commodity' ? 'diamond' : 'category')}</span>
-									</div>
-									<div>
-										<div class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</div>
-									</div>
-								</div>
-							</td>
-							<td class="td-right">
-								<span class="qty-value">{formatQuantity(item.quantity, item.unit)}</span>
-							</td>
-							<td>
-								<span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span>
-							</td>
-							<td>
-								<span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span>
-							</td>
-							<td>
-								<a
-									href="https://discord.com/users/{item.userDiscordId}"
-									target="_blank"
-									rel="noopener"
-									class="player-link"
-								>{item.username.toUpperCase()}</a>
-							</td>
+							<th>ITEM</th>
+							<th>DISPONIBILITE</th>
+							<th>QUALITE</th>
+							<th>LOCALISATION</th>
+							<th>PROPRIETAIRE</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+					</thead>
+					<tbody>
+						{#each data.items as item}
+							{@const isOwn = item.userId === data.user?.id}
+							{@const available = item.quantity - (item.reservedQuantity ?? 0)}
+							<tr
+								class:tr-clickable={!isOwn}
+								onclick={() => { if (!isOwn) reservationTarget = item; }}
+							>
+								<td>
+									<div class="item-cell">
+										<div class="item-icon">
+											<span class="material-symbols-outlined">{item.sectionIcon ?? (item.category === 'commodity' ? 'diamond' : 'category')}</span>
+										</div>
+										<div>
+											<div class="item-name">{item.name.toUpperCase().replace(/ /g, '_')}</div>
+										</div>
+									</div>
+								</td>
+								<td>
+									<AvailabilityBar
+										reserved={item.reservedQuantity ?? 0}
+										total={item.quantity}
+										unit={item.unit}
+									/>
+								</td>
+								<td>
+									<span class="quality-value">{item.quality > 0 ? item.quality : '—'}</span>
+								</td>
+								<td>
+									<span class="loc-value">{item.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span>
+								</td>
+								<td>
+									<a
+										href="https://discord.com/users/{item.userDiscordId}"
+										target="_blank"
+										rel="noopener"
+										class="player-link"
+										onclick={(e) => e.stopPropagation()}
+									>{item.username.toUpperCase()}</a>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	{/if}
+
+	{#if activeTab === 'reservations'}
+		{#if data.allReservations.length === 0}
+			<div class="empty-state">
+				<p class="empty-text">Aucune reservation active dans la corporation.</p>
+			</div>
+		{:else}
+			<div class="stock-table clipped-corner">
+				<table>
+					<thead>
+						<tr>
+							<th>ITEM</th>
+							<th>DEMANDEUR</th>
+							<th>PROPRIETAIRE</th>
+							<th class="th-right">QTE</th>
+							<th>LOCALISATION</th>
+							<th>STATUT</th>
+							<th>DATE</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.allReservations as res}
+							<tr>
+								<td>
+									<span class="item-name">{res.itemName.toUpperCase().replace(/ /g, '_')}</span>
+								</td>
+								<td>
+									<span class="player-name">{(res.requesterUsername ?? '—').toUpperCase()}</span>
+								</td>
+								<td>
+									<span class="player-name">{(res.ownerUsername ?? '—').toUpperCase()}</span>
+								</td>
+								<td class="td-right">
+									<span class="qty-value">{res.quantity} {res.unit}</span>
+								</td>
+								<td>
+									<span class="loc-value">{res.locationName?.toUpperCase().replace(/ /g, '_') || '—'}</span>
+								</td>
+								<td>
+									<span class="status-active">ACTIVE</span>
+								</td>
+								<td>
+									<span class="date-value">{new Date(res.createdAt).toLocaleDateString('fr-FR')}</span>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	{/if}
 </div>
+
+{#if reservationTarget}
+	{@const available = reservationTarget.quantity - (reservationTarget.reservedQuantity ?? 0)}
+	<ReservationModal
+		item={{
+			id: reservationTarget.id,
+			name: reservationTarget.name,
+			quantity: reservationTarget.quantity,
+			unit: reservationTarget.unit,
+			locationName: reservationTarget.locationName,
+			quality: reservationTarget.quality,
+			username: reservationTarget.username
+		}}
+		{available}
+		onSubmit={handleReserve}
+		onClose={() => (reservationTarget = null)}
+	/>
+{/if}
 
 <style>
 	.stock-page {
@@ -326,6 +435,9 @@
 	.td-right {
 		text-align: right;
 	}
+	.tr-clickable {
+		cursor: pointer;
+	}
 
 	/* ── Cell content ── */
 	.item-cell {
@@ -370,10 +482,27 @@
 	.player-link:hover {
 		color: var(--color-accent-cyan);
 	}
+	.player-name {
+		font-size: var(--font-size-xs);
+		color: var(--color-text-primary);
+		text-transform: uppercase;
+	}
 	.quality-value {
 		font-family: var(--font-mono);
 		font-size: var(--font-size-sm);
 		color: var(--color-text-primary);
+	}
+	.status-active {
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		color: var(--color-accent-cyan);
+		letter-spacing: 0.1em;
+	}
+	.date-value {
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		color: var(--color-text-muted);
 	}
 
 	/* ── Empty state ── */

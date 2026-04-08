@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db/index.js';
-import { inventoryItems, users, itemSectionConfigs, commodityUnitConfigs } from '$lib/server/db/schema/index.js';
-import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
+import { inventoryItems, users, itemSectionConfigs, commodityUnitConfigs, reservations } from '$lib/server/db/schema/index.js';
+import { activeInventory, activeReservation, escapeLike, getReservedQuantities } from '$lib/server/db/helpers.js';
 import { eq, and, ilike, gte, lte, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -57,9 +58,42 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}
 	}
 
+	// Batch fetch reserved quantities for all items
+	const itemIds = items.map((i) => i.id);
+	const reservedMap = await getReservedQuantities(itemIds);
+
+	// All active reservations in the corp for the RESERVATIONS tab
+	const requesterUsers = alias(users, 'requester_users');
+	const ownerUsers = alias(users, 'owner_users');
+
+	const allReservations = await db
+		.select({
+			id: reservations.id,
+			quantity: reservations.quantity,
+			status: reservations.status,
+			createdAt: reservations.createdAt,
+			itemName: inventoryItems.name,
+			locationName: inventoryItems.locationName,
+			unit: sql<string>`COALESCE(${commodityUnitConfigs.unit}, ${inventoryItems.unit})`.as('res_unit'),
+			requesterUsername: requesterUsers.discordUsername,
+			ownerUsername: ownerUsers.discordUsername
+		})
+		.from(reservations)
+		.innerJoin(inventoryItems, eq(reservations.inventoryItemId, inventoryItems.id))
+		.leftJoin(commodityUnitConfigs, eq(inventoryItems.uexCommodityId, commodityUnitConfigs.uexCommodityId))
+		.leftJoin(requesterUsers, eq(requesterUsers.id, reservations.requesterId))
+		.leftJoin(ownerUsers, eq(ownerUsers.id, reservations.ownerId))
+		.where(and(eq(reservations.corpId, corpId), activeReservation));
+
+	const itemsWithReserved = items.map((item) => ({
+		...item,
+		reservedQuantity: reservedMap.get(item.id) ?? 0
+	}));
+
 	return {
-		items,
+		items: itemsWithReserved,
 		players: [...playerMap.values()],
+		allReservations,
 		filters: { q: q ?? '', category: category ?? '', location: location ?? '', player: player ?? '', qualityMin: qualityMin ?? '', qualityMax: qualityMax ?? '' }
 	};
 };
