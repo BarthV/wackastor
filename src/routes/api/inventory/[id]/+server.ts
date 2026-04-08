@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
-import { inventoryItems } from '$lib/server/db/schema/index.js';
-import { activeInventory } from '$lib/server/db/helpers.js';
-import { eq, and } from 'drizzle-orm';
+import { inventoryItems, reservations } from '$lib/server/db/schema/index.js';
+import { activeInventory, activeReservation } from '$lib/server/db/helpers.js';
+import { eq, and, sum } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
 // PATCH: update inventory item (quantity, location, notes, move)
@@ -47,6 +47,22 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		.set(updates)
 		.where(eq(inventoryItems.id, params.id));
 
+	// If quantity was updated, check if active reservations exceed new quantity
+	if (body.quantity !== undefined) {
+		const [sumResult] = await db
+			.select({ total: sum(reservations.quantity) })
+			.from(reservations)
+			.where(and(eq(reservations.inventoryItemId, params.id), activeReservation));
+		const totalReserved = Number(sumResult?.total ?? 0);
+		if (body.quantity < totalReserved) {
+			// Cancel all active reservations on this item
+			await db
+				.update(reservations)
+				.set({ status: 'cancelled', updatedAt: Date.now() })
+				.where(and(eq(reservations.inventoryItemId, params.id), activeReservation));
+		}
+	}
+
 	return json({ success: true });
 };
 
@@ -76,6 +92,12 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		.update(inventoryItems)
 		.set({ deletedAt: Date.now() })
 		.where(eq(inventoryItems.id, params.id));
+
+	// Cancel all active reservations on this item
+	await db
+		.update(reservations)
+		.set({ status: 'cancelled', updatedAt: Date.now() })
+		.where(and(eq(reservations.inventoryItemId, params.id), activeReservation));
 
 	return json({ success: true });
 };
