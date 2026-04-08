@@ -61,7 +61,7 @@
 
 	const tabs = [
 		{ key: 'inventory', label: 'INVENTAIRE' },
-		{ key: 'attributions', label: 'ATTRIBUTIONS' }
+		{ key: 'attributions', label: 'DEMANDES EN COURS' }
 	];
 
 	// -- Attributions / requester summary --
