@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
-import { inventoryItems, commodityUnitConfigs } from '$lib/server/db/schema/index.js';
-import { activeInventory, escapeLike } from '$lib/server/db/helpers.js';
+import { inventoryItems, commodityUnitConfigs, reservations, users } from '$lib/server/db/schema/index.js';
+import { activeInventory, activeReservation, escapeLike } from '$lib/server/db/helpers.js';
 import { eq, and, ilike, gte, lte, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
@@ -49,8 +49,34 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.leftJoin(commodityUnitConfigs, eq(inventoryItems.uexCommodityId, commodityUnitConfigs.uexCommodityId))
 		.where(and(...conditions));
 
+	// Active reservations where current user is the owner
+	const attributions = await db
+		.select({
+			id: reservations.id,
+			quantity: reservations.quantity,
+			status: reservations.status,
+			createdAt: reservations.createdAt,
+			item: {
+				id: inventoryItems.id,
+				name: inventoryItems.name,
+				locationName: inventoryItems.locationName,
+				unit: sql<string>`COALESCE(${commodityUnitConfigs.unit}, ${inventoryItems.unit})`.as('attr_unit')
+			},
+			requester: {
+				id: users.id,
+				username: users.discordUsername,
+				discordId: users.discordId
+			}
+		})
+		.from(reservations)
+		.innerJoin(inventoryItems, eq(reservations.inventoryItemId, inventoryItems.id))
+		.innerJoin(users, eq(reservations.requesterId, users.id))
+		.leftJoin(commodityUnitConfigs, eq(inventoryItems.uexCommodityId, commodityUnitConfigs.uexCommodityId))
+		.where(and(eq(reservations.ownerId, locals.user!.id), activeReservation));
+
 	return {
 		items,
+		attributions,
 		filters: {
 			q: q ?? '',
 			location: location ?? '',

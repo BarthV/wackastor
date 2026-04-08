@@ -1,8 +1,11 @@
 <script lang="ts">
 	import SectionHeader from '$lib/components/ui/SectionHeader.svelte';
+	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import TerminalCard from '$lib/components/ui/TerminalCard.svelte';
 	import MultiItemForm from '$lib/components/inventory/MultiItemForm.svelte';
 	import Autocomplete from '$lib/components/ui/Autocomplete.svelte';
+	import AttributionList from '$lib/components/reservations/AttributionList.svelte';
+	import RequesterSummaryModal from '$lib/components/reservations/RequesterSummaryModal.svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { formatQuantity } from '$lib/utils/formatQuantity.js';
@@ -52,6 +55,82 @@
 		);
 		showForm = false;
 		invalidateAll();
+	}
+
+	let activeTab = $state('inventory');
+
+	const tabs = [
+		{ key: 'inventory', label: 'INVENTAIRE' },
+		{ key: 'attributions', label: 'ATTRIBUTIONS' }
+	];
+
+	// -- Attributions / requester summary --
+	let attrSelectedIds = $state(new Set<string>());
+	let showBulkFulfillConfirm = $state(false);
+	let summaryModal = $state<{
+		requester: { username: string; discordId: string };
+		reservations: Array<{ itemName: string; quantity: number; unit: string; locationName: string }>;
+	} | null>(null);
+
+	const attrAllSelected = $derived(
+		data.attributions.length > 0 && data.attributions.every((a) => attrSelectedIds.has(a.id))
+	);
+
+	function toggleAttr(id: string) {
+		const next = new Set(attrSelectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		attrSelectedIds = next;
+	}
+
+	function toggleAllAttr() {
+		if (attrAllSelected) {
+			attrSelectedIds = new Set();
+		} else {
+			attrSelectedIds = new Set(data.attributions.map((a) => a.id));
+		}
+	}
+
+	async function fulfillReservation(id: string) {
+		const resp = await fetch(`/api/reservations/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ status: 'fulfilled' })
+		});
+		if (resp.ok) {
+			invalidateAll();
+		}
+	}
+
+	async function executeBulkFulfill() {
+		const ids = [...attrSelectedIds];
+		const resp = await fetch('/api/reservations/bulk-fulfill', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ids })
+		});
+		if (resp.ok) {
+			attrSelectedIds = new Set();
+			showBulkFulfillConfirm = false;
+			invalidateAll();
+		}
+	}
+
+	async function viewSummary(requesterId: string) {
+		const resp = await fetch(`/api/reservations/by-owner/${requesterId}`);
+		if (!resp.ok) return;
+		const rows = await resp.json();
+		if (rows.length === 0) return;
+		const firstRow = rows[0];
+		summaryModal = {
+			requester: firstRow.requester,
+			reservations: rows.map((r: { item: { name: string; unit: string; locationName: string }; quantity: number }) => ({
+				itemName: r.item.name,
+				quantity: r.quantity,
+				unit: r.item.unit,
+				locationName: r.item.locationName
+			}))
+		};
 	}
 
 	let pendingDeleteId = $state<string | null>(null);
@@ -164,6 +243,29 @@
 		</button>
 	</div>
 
+	<TabBar {tabs} active={activeTab} onSelect={(key) => (activeTab = key)} />
+
+	{#if activeTab === 'attributions'}
+		{#if attrSelectedIds.size > 0}
+			<div class="selection-bar">
+				<span class="selection-count">{attrSelectedIds.size} selectionne(s)</span>
+				<button class="btn-fulfill-sel" onclick={() => (showBulkFulfillConfirm = true)}>
+					<span class="material-symbols-outlined">check_circle</span>
+					VALIDER SELECTION
+				</button>
+			</div>
+		{/if}
+		<AttributionList
+			attributions={data.attributions}
+			selectedIds={attrSelectedIds}
+			onToggle={toggleAttr}
+			onToggleAll={toggleAllAttr}
+			onViewSummary={viewSummary}
+			onFulfill={fulfillReservation}
+		/>
+	{/if}
+
+	{#if activeTab === 'inventory'}
 	<div class="filters-bar">
 		<input type="text" bind:value={q} placeholder="RESSOURCE..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
 		<input type="text" bind:value={location} placeholder="LIEU..." class="filter-input" onkeydown={(e) => e.key === 'Enter' && applyFilters()} />
@@ -255,6 +357,8 @@
 		</div>
 	{/if}
 
+	{/if}
+
 	{#if pendingDeleteId}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_autofocus -->
@@ -320,7 +424,32 @@
 			</div>
 		</div>
 	{/if}
+
+	{#if showBulkFulfillConfirm}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="confirm-overlay"
+			onkeydown={(e) => { if (e.key === 'Escape') showBulkFulfillConfirm = false; else if (e.key === 'Enter') executeBulkFulfill(); }}
+			onclick={() => (showBulkFulfillConfirm = false)}
+		>
+			<div class="confirm-dialog clipped-corner" onclick={(e) => e.stopPropagation()}>
+				<p class="confirm-text confirm-text-green">VALIDER {attrSelectedIds.size} RESERVATION(S) ?</p>
+				<div class="confirm-actions">
+					<button class="btn-cancel-dialog" onclick={() => (showBulkFulfillConfirm = false)}>ANNULER</button>
+					<button class="btn-confirm-fulfill" onclick={executeBulkFulfill}>VALIDER</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
+
+{#if summaryModal}
+	<RequesterSummaryModal
+		requester={summaryModal.requester}
+		reservations={summaryModal.reservations}
+		onClose={() => (summaryModal = null)}
+	/>
+{/if}
 
 <style>
 	.filters-bar {
@@ -618,4 +747,32 @@
 		cursor: pointer;
 	}
 	.btn-confirm-delete:hover { background: var(--color-accent-red); color: var(--color-bg-primary); }
+	.btn-fulfill-sel {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		padding: 4px 12px;
+		background: transparent;
+		border: 1px solid var(--color-accent-green, #00fc40);
+		color: var(--color-accent-green, #00fc40);
+		font-family: var(--font-label);
+		font-size: var(--font-size-xs);
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		cursor: pointer;
+	}
+	.btn-fulfill-sel :global(.material-symbols-outlined) { font-size: 16px; }
+	.btn-fulfill-sel:hover { background: var(--color-accent-green, #00fc40); color: var(--color-bg-primary); }
+	.confirm-text-green { color: var(--color-accent-green, #00fc40); }
+	.btn-confirm-fulfill {
+		padding: var(--space-sm) var(--space-lg);
+		background: transparent;
+		border: 1px solid var(--color-accent-green, #00fc40);
+		color: var(--color-accent-green, #00fc40);
+		font-family: var(--font-mono);
+		font-size: var(--font-size-sm);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.btn-confirm-fulfill:hover { background: var(--color-accent-green, #00fc40); color: var(--color-bg-primary); }
 </style>
