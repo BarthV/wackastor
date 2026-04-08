@@ -15,6 +15,7 @@
 	const navItems = [
 		{ href: '/stock', label: 'STOCKS', icon: 'inventory_2' },
 		{ href: '/inventory', label: 'INVENTAIRE', icon: 'package_2' },
+		{ href: '/wishlist', label: 'SOUHAITS', icon: 'bookmark' },
 		{ href: '/stats', label: 'STATS', icon: 'bar_chart' }
 	];
 
@@ -35,7 +36,7 @@
 	<!-- Fixed top header -->
 	<header class="app-header">
 		<div class="header-left">
-			<span class="header-title">WACKASTOR</span>
+			<a href="/stock" class="header-title">WACKASTOR</a>
 			<div class="header-separator"></div>
 			<span class="header-subtitle">GESTION_INVENTAIRE</span>
 		</div>
